@@ -2,10 +2,8 @@ import sparsevectors
 import math
 import pickle
 #import sequencelabels
-# Simplest possible logger, replace with any variant of your choice.
-from logger import logger
 
-
+from logger import logger # Simplest possible logger, replace with any variant of your choice.
 error = True  # loglevel
 debug = False  # loglevel
 monitor = False  # loglevel

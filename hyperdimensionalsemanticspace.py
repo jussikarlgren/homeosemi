@@ -10,14 +10,14 @@ monitor = False  # loglevel
 
 
 class SemanticSpace:
-    def __init__(self, dimensionality=2000, denseness=10):
+    def __init__(self, dimensionality:int=2000, denseness:int=10, name:str="no name"):
+        self.name = name
         self.indexspace = {}    # dict: string - sparse vector
         self.contextspace = {}  # dict: string - denser vector
         self.sequential = {}    # dict: string - boolean
         self.dimensionality = dimensionality
         self.denseness = denseness
         self.permutationcollection = {}
-        self.name = {}
         self.permutationcollection["nil"] = list(range(self.dimensionality))
         self.permutationcollection["before"] = sparsevectors.createpermutation(self.dimensionality)
         self.permutationcollection["after"] = sparsevectors.createpermutation(self.dimensionality)

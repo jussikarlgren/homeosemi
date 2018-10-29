@@ -14,7 +14,7 @@ class SemanticSpace:
         self.name = name
         self.indexspace = {}    # dict: string - sparse vector
         self.contextspace = {}  # dict: string - denser vector
-        self.sequential = {}    # dict: string - boolean
+        self.tag = {}          # dict: string - string
         self.dimensionality = dimensionality
         self.denseness = denseness
         self.permutationcollection = {}
@@ -50,18 +50,18 @@ class SemanticSpace:
                      sparsevectors.newrandomvector(self.dimensionality,
                                                    self.dimensionality // self.constantdenseness))
 
-    def observe(self, word, update=True, loglevel=False):
+    def observe(self, word, update=True, tag=None, loglevel=False):
         """
 
         :rtype: object
         """
         if not self.contains(word):
-            self.additem(word)
+            self.additem(word, None, tag)
             logger("'" + str(word) + "' is new and now introduced: " + str(self.indexspace[word]), loglevel)
         if update:
             self.languagemodel.observe(word)
 
-    def additem(self, item, sequential="True", vector=None):
+    def additem(self, item, vector=None, tag=None):
         '''
         Add new item to the space. Add randomly generated index vector (unless one is given as an argument or one
         already is recorded in index space); add empty context space, prep LanguageModel to accommodate item. Should
@@ -73,8 +73,8 @@ class SemanticSpace:
             self.indexspace[item] = vector
         self.contextspace[item] = sparsevectors.newemptyvector(self.dimensionality)
         self.languagemodel.additem(item)
-        self.sequential = sequential
         self.changed = True
+        self.tag[item] = tag
 
     def addintoitem(self, item, otheritem, weight=1, permutation=None):
         '''
@@ -180,18 +180,16 @@ class SemanticSpace:
         else:
             return 0.0
 
-    def contextneighbours(self, item, number=10, weights=False):
+    def contextneighbours(self, item:str, number:int=10, weights:bool=False, filtertag:bool=False)->list:
         '''
         Return the items from the contextspace most similar to the given item. I.e. items which have similar
         neighbours to the item.
-        :param self:
-        :param item:
-        :param number:
-        :param weights:
-        :return:
         '''
         n = {}
         for i in self.contextspace:
+            if filtertag:
+                if self.tag[i] != self.tag[item]:
+                    continue
             n[i] = sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[i])
         if weights:
             r = sorted(n.items(), key=lambda k: n[k[0]], reverse=True)[:number]

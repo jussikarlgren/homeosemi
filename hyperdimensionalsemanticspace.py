@@ -1,20 +1,20 @@
 import sparsevectors
 import math
 import pickle
-#import sequencelabels
 
-from logger import logger # Simplest possible logger, replace with any variant of your choice.
-error = True  # loglevel
-debug = False  # loglevel
-monitor = False  # loglevel
+from logger import logger  # Simplest possible logger, replace with any variant of your choice.
+error = True      # loglevel
+debug = False     # loglevel
+monitor = False   # loglevel
 
 
 class SemanticSpace:
-    def __init__(self, dimensionality:int=2000, denseness:int=10, name:str="no name"):
+    def __init__(self, dimensionality: int=2000, denseness: int=10, name: str="no name"):
         self.name = name
         self.indexspace = {}    # dict: string - sparse vector
         self.contextspace = {}  # dict: string - denser vector
         self.tag = {}          # dict: string - string
+        self.tagged = {}       # dict: string - list: str
         self.dimensionality = dimensionality
         self.denseness = denseness
         self.permutationcollection = {}
@@ -43,7 +43,6 @@ class SemanticSpace:
         newvec = sparsevectors.permute(vector, p)
         return newvec
 
-
     def addconstant(self, item):
         self.changed = True
         self.additem(item,
@@ -62,11 +61,11 @@ class SemanticSpace:
             self.languagemodel.observe(word)
 
     def additem(self, item, vector=None, tag=None):
-        '''
+        """
         Add new item to the space. Add randomly generated index vector (unless one is given as an argument or one
         already is recorded in index space); add empty context space, prep LanguageModel to accommodate item. Should
         normally be called from observe() but also at times from addintoitem.
-        '''
+        """
         if item not in self.indexspace:
             if vector is None:
                 vector = sparsevectors.newrandomvector(self.dimensionality, self.denseness)
@@ -75,16 +74,20 @@ class SemanticSpace:
         self.languagemodel.additem(item)
         self.changed = True
         self.tag[item] = tag
+        if tag not in self.tagged:
+            self.tagged[tag] = []
+        self.tagged[tag].append(item)
 
     def addintoitem(self, item, otheritem, weight=1, permutation=None):
-        '''
+        """
         Update the context vector of item by adding in the index vector of otheritem multiplied by the scalar weight.
         If item is unknown, add it to the space. If otheritem is unknown add only an index vector to the space.
         :param item: str
         :param otheritem: str
         :param weight: float
+        :param permutation: list
         :return: None
-        '''
+        """
         if not self.contains(item):
             self.additem(item)
         if otheritem not in self.indexspace:
@@ -111,7 +114,7 @@ class SemanticSpace:
         if self.contains(item):
             del self.indexspace[item]
             del self.contextspace[item]
-            self.languagemodel.removeitem[item]
+            self.languagemodel.removeitem(item)
             self.changed = True
 
     def reducewordspace(self, threshold=1):
@@ -121,12 +124,11 @@ class SemanticSpace:
                 self.removeitem(item)
                 self.changed = True
 
-
     def outputwordspace(self, filename):
-        '''
+        """
         Save wordspace to disk.
         :param filename: str
-        '''
+        """
         try:
             with open(filename, 'wb') as outfile:
                 itemj = {}
@@ -134,13 +136,12 @@ class SemanticSpace:
                 itemj["densenss"] = self.denseness
                 itemj["poswindow"] = self.poswindow
                 itemj["constantdensenss"] = self.constantdenseness
-                itemj["sequential"] = self.sequential
                 itemj["indexspace"] = self.indexspace
                 itemj["contextspace"] = self.contextspace
                 itemj["permutationcollection"] = self.permutationcollection
                 itemj["languagemodel"] = self.languagemodel
                 pickle.dump(itemj, outfile)
-        except:
+        except IOError:
                 logger("Could not write >>" + filename + ".toto <<", error)
 
     def inputwordspace(self, vectorfile):
@@ -151,12 +152,11 @@ class SemanticSpace:
             self.denseness = itemj["densenss"]
             self.poswindow = itemj["poswindow"]
             self.constantdenseness = itemj["constantdensenss"]
-            self.sequential = itemj["sequential"]
             self.indexspace = itemj["indexspace"]
             self.contextspace = itemj["contextspace"]
             self.permutationcollection = itemj["permutationcollection"]
             self.languagemodel = itemj["languagemodel"]
-        except:
+        except IOError:
             logger("Could not read from >>" + vectorfile + "<<", error)
 
     def contains(self, item):
@@ -180,21 +180,32 @@ class SemanticSpace:
         else:
             return 0.0
 
-    def contextneighbours(self, item:str, number:int=10, weights:bool=False, filtertag:bool=False)->list:
+    def contextneighbours(self, item: str, number: int=10, weights: bool=False,
+                          filtertag: bool=False, threshold: int=-1)->list:
         '''
         Return the items from the contextspace most similar to the given item. I.e. items which have similar
         neighbours to the item.
         '''
-        n = {}
-        for i in self.contextspace:
-            if filtertag:
-                if self.tag[i] != self.tag[item]:
-                    continue
-            n[i] = sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[i])
-        if weights:
-            r = sorted(n.items(), key=lambda k: n[k[0]], reverse=True)[:number]
+        neighbourhood = {}
+        if filtertag:
+            targetset = self.tagged[self.tag[item]]
         else:
-            r = sorted(n, key=lambda k: n[k], reverse=True)[:number]
+            targetset = self.contextspace
+        for i in targetset:  # was: for i in self.contextspace:
+            if i == item:
+                continue
+#            if filtertag:
+#                if self.tag[i] != self.tag[item]:
+#                    continue
+            k = sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[i])
+            if k > threshold:
+               neighbourhood[i] = k
+        if not number:
+            number = len(neighbourhood)
+        if weights:
+            r = sorted(neighbourhood.items(), key=lambda k: neighbourhood[k[0]], reverse=True)[:number]
+        else:
+            r = sorted(neighbourhood, key=lambda k: neighbourhood[k], reverse=True)[:number]
         return r
 
     def contexttoindexneighbours(self, item, number=10, weights=False, permutationname="nil"):
@@ -203,14 +214,16 @@ class SemanticSpace:
         have occurred in contexts with the item.
         '''
         permutation = self.permutationcollection[permutationname]
-        n = {}
+        neighbourhood = {}
         for i in self.indexspace:
-            n[i] = sparsevectors.sparsecosine(self.contextspace[item],
+            neighbourhood[i] = sparsevectors.sparsecosine(self.contextspace[item],
                    sparsevectors.permute(self.indexspace[i], permutation))
+        if not number:
+            number = len(neighbourhood)
         if weights:
-            r = sorted(n.items(), key=lambda k: n[k[0]], reverse=True)[:number]
+            r = sorted(neighbourhood.items(), key=lambda k: neighbourhood[k[0]], reverse=True)[:number]
         else:
-            r = sorted(n, key=lambda k: n[k], reverse=True)[:number]
+            r = sorted(neighbourhood, key=lambda k: neighbourhood[k], reverse=True)[:number]
         return r
 
     def indextocontextneighbours(self, item, number=10, weights=False, permutationname="nil"):

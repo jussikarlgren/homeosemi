@@ -1,6 +1,7 @@
 import sparsevectors
 import math
 import pickle
+from languagemodel import LanguageModel
 
 from logger import logger  # Simplest possible logger, replace with any variant of your choice.
 error = True      # loglevel

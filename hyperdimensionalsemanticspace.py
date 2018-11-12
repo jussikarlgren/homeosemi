@@ -22,6 +22,7 @@ class SemanticSpace:
         self.permutationcollection["nil"] = list(range(self.dimensionality))
         self.permutationcollection["before"] = sparsevectors.createpermutation(self.dimensionality)
         self.permutationcollection["after"] = sparsevectors.createpermutation(self.dimensionality)
+        self.observedfrequency = {}  # dict: string - int
         self.constantdenseness = 10
         self.languagemodel = LanguageModel()
         self.poswindow = 3
@@ -58,6 +59,7 @@ class SemanticSpace:
         if not self.contains(word):
             self.additem(word, None, tag)
             logger("'" + str(word) + "' is new and now introduced: " + str(self.indexspace[word]), loglevel)
+        self.observedfrequency[word] += 1
         if update:
             self.languagemodel.observe(word)
 
@@ -75,6 +77,7 @@ class SemanticSpace:
         self.languagemodel.additem(item)
         self.changed = True
         self.tag[item] = tag
+        self.observedfrequency[item] = 0
         if tag not in self.tagged:
             self.tagged[tag] = []
         self.tagged[tag].append(item)
@@ -141,6 +144,7 @@ class SemanticSpace:
                 itemj["contextspace"] = self.contextspace
                 itemj["permutationcollection"] = self.permutationcollection
                 itemj["languagemodel"] = self.languagemodel
+                itemj["observedfrequency"] = self.observedfrequency
                 pickle.dump(itemj, outfile)
         except IOError:
                 logger("Could not write >>" + filename + ".toto <<", error)
@@ -157,6 +161,8 @@ class SemanticSpace:
             self.contextspace = itemj["contextspace"]
             self.permutationcollection = itemj["permutationcollection"]
             self.languagemodel = itemj["languagemodel"]
+            self.observedfrequency = itemj["observedfrequency"]
+
         except IOError:
             logger("Could not read from >>" + vectorfile + "<<", error)
 
@@ -185,7 +191,8 @@ class SemanticSpace:
                           filtertag: bool=False, threshold: int=-1)->list:
         '''
         Return the items from the contextspace most similar to the given item. I.e. items which have similar
-        neighbours to the item.
+        neighbours to the item. Specify number of items desired (0 will give all), if weights are desired, if
+        only items with the same tag are desired, and if thresholding to a certain horizon is desired.
         '''
         neighbourhood = {}
         if filtertag:

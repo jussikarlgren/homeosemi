@@ -61,6 +61,10 @@ class SemanticSpace:
         if update:
             self.languagemodel.observe(word)
 
+
+    def observedfrequency(self, item):
+        return self.languagemodel.observedfrequency(item)
+
     def additem(self, item, vector=None, tag=None):
         """
         Add new item to the space. Add randomly generated index vector (unless one is given as an argument or one

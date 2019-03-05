@@ -7,6 +7,7 @@ resourcedirectory = "/some/path/to/resources/"    # configure this appropriately
 languagemodel = languagemodel.LanguageModel()
 languagemodel.importstats(resourcedirectory + "term-tab-frequency-list.file")  # insert file name here
 
+
 cspace = hyperdimensionalsemanticspace.SemanticSpace()
 cspace.addoperator("before")
 cspace.addoperator("after")

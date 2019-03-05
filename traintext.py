@@ -1,6 +1,11 @@
 import hyperdimensionalsemanticspace
 from nltk import word_tokenize
 from nltk import sent_tokenize
+import languagemodel
+
+resourcedirectory = "/some/path/to/resources/"    # configure this appropriately
+languagemodel = languagemodel.LanguageModel()
+languagemodel.importstats(resourcedirectory + "term-tab-frequency-list.file")  # insert file name here
 
 cspace = hyperdimensionalsemanticspace.SemanticSpace()
 cspace.addoperator("before")
@@ -10,7 +15,7 @@ dspace = hyperdimensionalsemanticspace.SemanticSpace()
 
 
 def weight(item:str):
-    return 1
+    return languagemodel.frequencyweight(item, False)
 
 
 def trainusingtext(text:str, window:int=2):

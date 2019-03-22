@@ -39,10 +39,11 @@ class SemanticSpace:
             return False
 
     def useoperator(self, vector, operator):
-        if not self.isoperator(operator):
-            self.addoperator(operator)
-        p = self.permutationcollection[operator]
-        newvec = sparsevectors.permute(vector, p)
+        newvec = vector
+        if operator:
+            if not self.isoperator(operator):
+                self.addoperator(operator)
+            newvec = sparsevectors.permute(vector, self.permutationcollection[operator])
         return newvec
 
     def addconstant(self, item):
@@ -62,7 +63,6 @@ class SemanticSpace:
         self.observedfrequency[word] += 1
         if update:
             self.languagemodel.observe(word)
-
 
     def observedfrequency(self, item):
         return self.languagemodel.observedfrequency(item)
@@ -86,7 +86,7 @@ class SemanticSpace:
             self.tagged[tag] = []
         self.tagged[tag].append(item)
 
-    def addintoitem(self, item, otheritem, weight=1, permutation=None):
+    def additemintoitem(self, item, otheritem, weight=1, operator=None):
         """
         Update the context vector of item by adding in the index vector of otheritem multiplied by the scalar weight.
         If item is unknown, add it to the space. If otheritem is unknown add only an index vector to the space.
@@ -100,11 +100,14 @@ class SemanticSpace:
             self.additem(item)
         if otheritem not in self.indexspace:
             self.indexspace[otheritem] = sparsevectors.newrandomvector(self.dimensionality, self.denseness)
-        if permutation is None:
-            vector = self.indexspace[otheritem]
-        else:
-            vector = sparsevectors.permute(self.indexspace[otheritem],
-                                           self.permutationcollection[permutation])
+        self.addintoitem(item, self.indexspace[otheritem], 1, operator)
+
+    def addintoitem(self, item, vector, weight=1, operator=None):
+        if not self.contains(item):
+            self.additem(item)
+        if not operator is None:
+            vector = sparsevectors.permute(vector,
+                                           self.permutationcollection[operator])
         self.contextspace[item] = sparsevectors.sparseadd(self.contextspace[item],
                                                           sparsevectors.normalise(vector),
                                                           weight)
@@ -132,6 +135,13 @@ class SemanticSpace:
                 self.removeitem(item)
                 self.changed = True
 
+    def comb(self):
+        for item in self.contextspace:
+            self.contexspace[item].comb()
+
+
+    #================================================================
+    # input output wordspace
     def outputwordspace(self, filename):
         """
         Save wordspace to disk.
@@ -170,6 +180,8 @@ class SemanticSpace:
         except IOError:
             logger("Could not read from >>" + vectorfile + "<<", error)
 
+    # ===========================================================================
+    # querying the semantic space
     def contains(self, item):
         if item in self.indexspace and item in self.contextspace:
             return True
@@ -192,7 +204,7 @@ class SemanticSpace:
             return 0.0
 
     def contextneighbours(self, item: str, number: int=10, weights: bool=False,
-                          filtertag: bool=False, threshold: int=-1)->list:
+                          filtertag: bool=False, threshold: int=-1) -> list:
         '''
         Return the items from the contextspace most similar to the given item. I.e. items which have similar
         neighbours to the item. Specify number of items desired (0 will give all), if weights are desired, if
@@ -211,7 +223,7 @@ class SemanticSpace:
 #                    continue
             k = sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[i])
             if k > threshold:
-               neighbourhood[i] = k
+                neighbourhood[i] = k
         if not number:
             number = len(neighbourhood)
         if weights:
@@ -240,12 +252,12 @@ class SemanticSpace:
 
     def indextocontextneighbours(self, item, number=10, weights=False, permutationname="nil"):
         permutation = self.permutationcollection[permutationname]
-        n = {}
+        neighbourhood = {}
         for i in self.contextspace:
-            n[i] = sparsevectors.sparsecosine(sparsevectors.permute(self.indexspace[item], permutation),
+            neighbourhood[i] = sparsevectors.sparsecosine(sparsevectors.permute(self.indexspace[item], permutation),
                                               self.contextspace[i])
         if weights:
-            r = sorted(n.items(), key=lambda k: n[k[0]], reverse=True)[:number]
+            r = sorted(neighbourhood.items(), key=lambda k: neighbourhood[k[0]], reverse=True)[:number]
         else:
-            r = sorted(n, key=lambda k: n[k], reverse=True)[:number]
+            r = sorted(neighbourhood, key=lambda k: neighbourhood[k], reverse=True)[:number]
         return r

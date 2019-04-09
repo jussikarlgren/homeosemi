@@ -14,8 +14,8 @@ class SemanticSpace:
         self.name = name
         self.indexspace = {}    # dict: string - sparse vector
         self.contextspace = {}  # dict: string - denser vector
-        self.tag = {}          # dict: string - string
-        self.tagged = {}       # dict: string - list: str
+        self.tag = {}           # dict: string - string
+        self.tagged = {}        # dict: string - list: str
         self.dimensionality = dimensionality
         self.denseness = denseness
         self.permutationcollection = {}
@@ -137,7 +137,7 @@ class SemanticSpace:
 
     def comb(self):
         for item in self.contextspace:
-            self.contexspace[item].comb()
+            self.contextspace[item].comb()
 
 
     #================================================================
@@ -175,8 +175,12 @@ class SemanticSpace:
             self.contextspace = itemj["contextspace"]
             self.permutationcollection = itemj["permutationcollection"]
             self.languagemodel = itemj["languagemodel"]
-            self.observedfrequency = itemj["observedfrequency"]
-
+            try:
+                self.observedfrequency = itemj["observedfrequency"]
+            except KeyError:
+                self.observedfrequency = {}
+                for knownitem in self.contextspace:
+                    self.observedfrequency[knownitem] = 1
         except IOError:
             logger("Could not read from >>" + vectorfile + "<<", error)
 
@@ -218,9 +222,6 @@ class SemanticSpace:
         for i in targetset:  # was: for i in self.contextspace:
             if i == item:
                 continue
-#            if filtertag:
-#                if self.tag[i] != self.tag[item]:
-#                    continue
             k = sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[i])
             if k > threshold:
                 neighbourhood[i] = k

@@ -5,8 +5,8 @@ from corenlp import CoreNLPClient, TimeoutException
 
 parser_client = CoreNLPClient(
     annotators=["tokenize ssplit pos lemma depparse"],  # natlog, ner, parse, coref
-    timeout=30000,
-    be_quiet=True)  # natlog # memory="16G"
+    timeout=30000)
+#    be_quiet=True)  # natlog # memory="16G"
 
 #  past,  3psgpresent, past part, present, base, gerund/present participle
 verbposes = ["VBD", "VBZ", "VBN", "VBP", "VB", "VBG"]
@@ -35,6 +35,7 @@ def restartCoreNlpClient():
 
 def processdependencies(ss, loglevel=False):
     roles = {}
+    features = []
     string = []
     deps = []
     negation = False
@@ -127,7 +128,6 @@ def processdependencies(ss, loglevel=False):
                         tense = "FUTURE"
         except KeyError:
             logger("tense situation in " + string, True)
-        features = []
         if root > len(ss.token) / 2:
             features.append(tag + "VERYLATEMAINV")
         elif root > len(ss.token) / 3:

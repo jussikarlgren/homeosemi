@@ -2,10 +2,11 @@ import sparsevectors
 import math
 import pickle
 from languagemodel import LanguageModel
+import re
 
 from logger import logger  # Simplest possible logger, replace with any variant of your choice.
 error = True      # loglevel
-debug = False     # loglevel
+debug = True     # loglevel
 monitor = False   # loglevel
 
 
@@ -137,8 +138,7 @@ class SemanticSpace:
 
     def comb(self):
         for item in self.contextspace:
-            self.contextspace[item].comb()
-
+            sparsevectors.comb(self.contextspace[item], 0.2, self.dimensionality)
 
     #================================================================
     # input output wordspace
@@ -184,6 +184,49 @@ class SemanticSpace:
         except IOError:
             logger("Could not read from >>" + vectorfile + "<<", error)
 
+    def importgavagaiwordspace(self, vectorfile:str, threshold=5):
+        vectorpattern = re.compile(r"\(\"(.*)\" #S(\d+);([\d\+\-\;]+): #S\d+;(.+): (\d+)\)",
+                                   re.IGNORECASE)
+        itempattern = re.compile(r"(\d+)\+?(\-?[\d\.e\-]+)$")
+        antal = 0
+        antalkvar = 0
+        try:
+            with open(vectorfile, 'rt', errors="replace") as gavagaispace:
+                for line in gavagaispace:
+                    antal += 1
+                    vectors = vectorpattern.match(line)
+                    if vectors:
+                        string = str(vectors.group(1))
+                        dim = int(vectors.group(2))
+                        idx = vectors.group(3)
+                        ctx = vectors.group(4)
+                        freq = int(vectors.group(5))
+                        if freq > threshold:
+                            antalkvar += 1
+#                            logger("{} {} {} {} {}".format(antal, antalkvar, string, freq, idx), debug)
+                            idxvector = sparsevectors.newemptyvector(dim)
+                            idxlist = idx.split(";")
+                            for ii in idxlist:
+                                try:
+                                    item = itempattern.match(ii)
+                                    idxvector[int(item.group(1))] = float(item.group(2))
+                                except:
+                                    logger("{} {} {} {}".format(antal, string, ii, idx), error)
+                            self.additem(string, idxvector)
+                            ctxvector = sparsevectors.newemptyvector(dim)
+                            ctxlist = ctx.split(";")
+                            for ii in ctxlist:
+                                try:
+                                    item = itempattern.match(ii)
+                                    ctxvector[int(item.group(1))] = float(item.group(2))
+                                except:
+                                    logger("{} {} {} {}".format(antal, string, ii, idx), error)
+                            self.contextspace[string] = ctxvector
+                            self.observedfrequency[string] = freq
+                            self.languagemodel.additem(string, freq)
+        except IOError:
+            logger("Could not read from >>" + vectorfile + "<<", error)
+
     # ===========================================================================
     # querying the semantic space
     def contains(self, item):
@@ -219,7 +262,7 @@ class SemanticSpace:
             targetset = self.tagged[self.tag[item]]
         else:
             targetset = self.contextspace
-        for i in targetset:  # was: for i in self.contextspace:
+        for i in targetset:
             if i == item:
                 continue
             k = sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[i])

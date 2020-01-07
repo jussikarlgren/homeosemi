@@ -1,7 +1,14 @@
 from logger import logger
 import os
-os.environ["CORENLP_HOME"] = "/usr/share/stanford-corenlp-full/"
-from corenlp import CoreNLPClient, TimeoutException
+#from corenlp import CoreNLPClient, TimeoutException
+#os.environ["CORENLP_HOME"] = "/usr/share/stanford-corenlp-full/"
+
+import stanfordnlp
+stanfordnlp.download('en')   # This downloads the English models for the neural pipeline
+nlp = stanfordnlp.Pipeline() # This sets up a default neural pipeline in English
+doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
+doc.sentences[0].print_dependencies()
+
 
 parser_client = CoreNLPClient(
     annotators=["tokenize ssplit pos lemma depparse"],  # natlog, ner, parse, coref
@@ -20,7 +27,7 @@ def semanticdependencyparse(sentence, loglevel=False):
         depgraph = parser_client.annotate(sentence)
         for ss in depgraph.sentence:
             utterances.append(processdependencies(ss, loglevel))
-    except TimeoutException:
+    except:
         logger("Time out for corenlp processing '" + sentence + "'", True)
         returgods = {}
         returgods["roles"] = []

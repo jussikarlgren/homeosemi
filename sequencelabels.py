@@ -3,8 +3,6 @@ import sparsevectors
 import pickle
 
 
-#parser = CoreNLPClient(annotators="tokenize ssplit pos lemma depparse".split())
-
 class SequenceLabels:
     def __init__(self, dimensionality=2000, window=3,
                  sequencelabel=None, permutations={}):
@@ -24,24 +22,24 @@ class SequenceLabels:
     def windows(self, sequence):
         windowlist = []
         if self.window > 0:
-           windowlist = [sequence[ii:ii + self.window] for ii in range(len(sequence) - self.window + 1)]
+            windowlist = [sequence[ii:ii + self.window] for ii in range(len(sequence) - self.window + 1)]
         return windowlist
 
     def onesequencevector(self, subsequence, accumulator=None, loglevel=False):
-        if accumulator == None:
+        if accumulator is None:
             accumulator = self.sequencelabel
         if subsequence == []:
             return accumulator
         else:
             head = subsequence[0]  # type: str
             tail = subsequence[1:]
-            if not head in self.permutations:
+            if head not in self.permutations:
                 self.permutations[head] = sparsevectors.createpermutation(self.dimensionality)
                 self.changed = True
             return self.onesequencevector(tail, sparsevectors.permute(accumulator, self.permutations[head]))
 
     def sequencevector(self, sequence, initialvector=None, loglevel=False):
-        if initialvector == None:
+        if initialvector is None:
             initialvector = sparsevectors.newemptyvector(self.dimensionality)
         windowlist = self.windows(sequence)
         logger(str(windowlist), loglevel)
@@ -50,9 +48,6 @@ class SequenceLabels:
                                                     sparsevectors.normalise(self.onesequencevector(w, None, loglevel)))
         return initialvector
 
-
-    #================================================================
-    # save and restore sequence model
     def save(self,  filename="/home/jussi/data/storm/vectorspace/sequencemodel.hyp"):
         try:
             with open(filename, 'wb') as outfile:

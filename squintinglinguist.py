@@ -1,13 +1,13 @@
+import re
+#import semanticroles
+from lexicalfeatures import lexicon
+from logger import logger
+import nltk
 from nltk import sent_tokenize
 from nltk import word_tokenize
 from nltk import pos_tag
-import nltk
-nltk.download('averaged_perceptron_tagger')
+#nltk.download('averaged_perceptron_tagger')
 
-import re
-from lexicalfeatures import lexicon
-from logger import logger
-import semanticroles
 
 urlpatternexpression = re.compile(r"https?://[/A-Za-z0-9\.\-\?_]+", re.IGNORECASE)
 handlepattern = re.compile(r"@[A-Za-z0-9_\-±.]+", re.IGNORECASE)
@@ -15,8 +15,16 @@ verbtags = ["VB", "VBZ", "VBP", "VBN", "VBD", "VBG"]
 adjectivetags = ["JJ", "JJR", "JJS"]
 
 
-def restartCoreNlpClient():
-    semanticroles.restartCoreNlpClient()
+#def restartCoreNlpClient():
+#    semanticroles.restartCoreNlpClient()
+
+
+def sentence_list(text):
+    sents = sent_tokenize(text)
+    r = []
+    for s in sents:
+        r.append(word_tokenize(s))
+    return r
 
 
 def generalise(text, handlesandurls=True, nouns=True, verbs=True, adjectives=True, adverbs=False):
@@ -79,7 +87,9 @@ def featurise(text, loglevel=False):
             for feature in lexicon:
                 if word.lower() in lexicon[feature]:
                     features.append("JiK" + feature)
-        returnfeatures = semanticroles.semanticdependencyparse(text)
+        returnfeatures["features"] = []
+        returnfeatures["roles"] = []
+#        returnfeatures = semanticroles.semanticdependencyparse(text)
         returnfeatures["features"] += features
         poses = postags(text)
         returnfeatures["pos"] = poses
@@ -104,3 +114,24 @@ def mildpositems(string, full=False):
         returnposes = [("START", "BEG")] + poses + [("END", "END")]
     return returnposes
 
+
+class Sentence:
+    '''Holds information about one sentence. Maybe should be one clause instead tho.'''
+    def __init__(self, sentence:list):
+        self.topic = "topic"
+        self.comment = "comment"
+        self.given = "given"
+        self.new = "new"
+        self.theme = "theme"
+        self.rheme = "rheme"
+        self.tempus = "PRESENT"  # PRESENT PAST FUTURE
+        self.mood = "TRUE"  #  true, potential, optative
+        self.aspect = "STATE"  # state perfect imperfect habitual
+        self.speechact = "INDICATIVE"  # indicative imperative question
+        self.sentence = sentence
+        self.deps = []
+
+    def process(self):
+        utterances = semanticroles.semanticdependencyparse(self.sentence)
+        for u in utterances:
+            self.deps.append(u)

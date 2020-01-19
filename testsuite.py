@@ -2,20 +2,28 @@
 
 synset = {}
 synset["weekdays"] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-synset["abbrevmonths"] = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
-synset["dayparts"] = ["morning", "evening", "night", "day", "afternoon"]
+synset["abbrevmonths"] = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sept", "oct", "nov", "dec"]
+synset["dayparts"] = ["morning", "evening", "day", "afternoon", "midday", "lunchtime"]
 synset["nordics"] = ["sweden", "finland", "denmark", "norway", "iceland"]
-synset["colours"] = ["red", "green", "blue", "yellow", "black", "white", "brown", "orange"]
-synset["drinks"] = ["beer", "wine", "liquor", "soda"]
-synset["hotdrinks"] = ["coffee", "tea", "cocoa"]
-synset["vegetables"] = ["tomato", "avocado", "carrot", "spinach", "cucumber", "celery", "onion", "salad"]
-synset["establishments"] = ["restaurant", "bistro", "cafe", "diner", "bar", "pub", "bakery"]
-synset["cities"] = ["london", "paris", "brussels", "berlin", "rome", "madrid", "tokyo"]
+synset["colours"] = ["red", "green", "blue", "yellow", "black", "white", "brown", "orange", "grey"]
+synset["drinks"] = ["beer", "wine", "cocktail", "softdrink"]
+synset["hotdrinks"] = ["coffee", "tea", "latte", "espresso"]
+synset["vegetables"] = ["tomato", "avocado", "carrot", "spinach", "cucumber", "celery", "onion", "lettuce", "broccoli"]
+synset["establishments"] = ["restaurant", "bistro", "cafe", "diner", "bar", "pub", "taverna"]
+synset["cities"] = ["london", "paris", "brussels", "berlin", "rome", "madrid", "tokyo", "moscow"]
 synset["months"] = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+
+
+# entity tests see paper by kiko in ecir wn18rr
+
+# topic id use eg trec ap corpus
+
 
 syntest = {}
 syntest["toefl"] = {}
 syntest["esl"] = {}
+
+
 
 syntest["toefl"]["enormously"] = ["tremendously", "decidedly", "uniquely", "appropriately"]
 syntest["toefl"]["provisions"] = ["stipulations", "interrelations", "jurisdictions", "interpretations"]

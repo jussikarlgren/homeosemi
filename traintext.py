@@ -7,7 +7,6 @@ resourcedirectory = "/some/path/to/resources/"    # configure this appropriately
 languagemodel = languagemodel.LanguageModel()
 languagemodel.importstats(resourcedirectory + "term-tab-frequency-list.file")  # insert file name here
 
-
 cspace = hyperdimensionalsemanticspace.SemanticSpace()
 cspace.addoperator("before")
 cspace.addoperator("after")
@@ -15,11 +14,11 @@ cspace.addoperator("after")
 dspace = hyperdimensionalsemanticspace.SemanticSpace()
 
 
-def weight(item:str):
+def weight(item: str):
     return languagemodel.frequencyweight(item, False)
 
 
-def trainusingtext(text:str, window:int=2):
+def trainusingtext(text: str, window: int=2):
     sentences = sent_tokenize(text.lower())
     for sentence in sentences:
         ii = 0
@@ -39,4 +38,3 @@ def trainusingtext(text:str, window:int=2):
 
 
 #cspace.outputwordspace("context.wordspace")
-#dspace.outputwordspace("sentence.wordspace")

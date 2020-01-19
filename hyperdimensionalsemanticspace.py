@@ -1,12 +1,13 @@
 import sparsevectors
+import math
 import pickle
 from languagemodel import LanguageModel
+import re
 
 from logger import logger  # Simplest possible logger, replace with any variant of your choice.
-
-error = True  # loglevel
-debug = False  # loglevel
-monitor = False  # loglevel
+error = True      # loglevel
+debug = False     # loglevel
+monitor = False   # loglevel
 
 
 def inputwordspace(vectorfile):
@@ -24,12 +25,12 @@ def similarity(vector, anothervector):
 
 
 class SemanticSpace:
-    def __init__(self, dimensionality: int = 2000, denseness: int = 10, name: str = "no name"):
+    def __init__(self, dimensionality: int=2000, denseness: int=10, name: str="no name"):
         self.name = name
-        self.indexspace = {}  # dict: string - sparse vector
+        self.indexspace = {}    # dict: string - sparse vector
         self.contextspace = {}  # dict: string - denser vector
-        self.tag = {}  # dict: string - string
-        self.tagged = {}  # dict: string - list: str
+        self.tag = {}           # dict: string - string
+        self.tagged = {}        # dict: string - list: str
         self.dimensionality = dimensionality
         self.denseness = denseness
         self.permutationcollection = {"nil": list(range(self.dimensionality)),
@@ -208,6 +209,49 @@ class SemanticSpace:
     #     except IOError:
     #         logger("Could not read from >>" + vectorfile + "<<", error)
 
+    def importgavagaiwordspace(self, vectorfile:str, threshold=5):
+        vectorpattern = re.compile(r"\(\"(.*)\" #S(\d+);([\d\+\-\;]+): #S\d+;(.+): (\d+)\)",
+                                   re.IGNORECASE)
+        itempattern = re.compile(r"(\d+)\+?(\-?[\d\.e\-]+)$")
+        antal = 0
+        antalkvar = 0
+        try:
+            with open(vectorfile, 'rt', errors="replace") as gavagaispace:
+                for line in gavagaispace:
+                    antal += 1
+                    vectors = vectorpattern.match(line)
+                    if vectors:
+                        string = str(vectors.group(1))
+                        dim = int(vectors.group(2))
+                        idx = vectors.group(3)
+                        ctx = vectors.group(4)
+                        freq = int(vectors.group(5))
+                        if freq > threshold:
+                            antalkvar += 1
+#                            logger("{} {} {} {} {}".format(antal, antalkvar, string, freq, idx), debug)
+                            idxvector = sparsevectors.newemptyvector(dim)
+                            idxlist = idx.split(";")
+                            for ii in idxlist:
+                                try:
+                                    item = itempattern.match(ii)
+                                    idxvector[int(item.group(1))] = float(item.group(2))
+                                except:
+                                    logger("{} {} {} {}".format(antal, string, ii, idx), error)
+                            self.additem(string, idxvector)
+                            ctxvector = sparsevectors.newemptyvector(dim)
+                            ctxlist = ctx.split(";")
+                            for ii in ctxlist:
+                                try:
+                                    item = itempattern.match(ii)
+                                    ctxvector[int(item.group(1))] = float(item.group(2))
+                                except:
+                                    logger("{} {} {} {}".format(antal, string, ii, idx), error)
+                            self.contextspace[string] = ctxvector
+                            self.observedfrequency[string] = freq
+                            self.languagemodel.additem(string, freq)
+        except IOError:
+            logger("Could not read from >>" + vectorfile + "<<", error)
+
     # ===========================================================================
     # querying the semantic space
     def contains(self, item):
@@ -228,8 +272,8 @@ class SemanticSpace:
         else:
             return 0.0
 
-    def contextneighbours(self, item: str, number: int = 10, weights: bool = False,
-                          filtertag: bool = False, threshold: int = -1) -> list:
+    def contextneighbours(self, item: str, number: int=10, weights: bool=False,
+                          filtertag: bool=False, threshold: int=-1) -> list:
         """
         Return the items from the contextspace most similar to the given item. I.e. items which have similar
         neighbours to the item. Specify number of items desired (0 will give all), if weights are desired, if
@@ -263,7 +307,7 @@ class SemanticSpace:
         neighbourhood = {}
         for i in self.indexspace:
             neighbourhood[i] = sparsevectors.sparsecosine(self.contextspace[item],
-                                                          sparsevectors.permute(self.indexspace[i], permutation))
+                   sparsevectors.permute(self.indexspace[i], permutation))
         if not number:
             number = len(neighbourhood)
         if weights:
@@ -277,7 +321,7 @@ class SemanticSpace:
         neighbourhood = {}
         for i in self.contextspace:
             neighbourhood[i] = sparsevectors.sparsecosine(sparsevectors.permute(self.indexspace[item], permutation),
-                                                          self.contextspace[i])
+                                              self.contextspace[i])
         if weights:
             r = sorted(neighbourhood.items(), key=lambda k: neighbourhood[k[0]], reverse=True)[:number]
         else:

@@ -103,7 +103,7 @@ class SemanticSpace:
             self.indexspace[otheritem] = sparsevectors.newrandomvector(self.dimensionality, self.denseness)
         self.addintoitem(item, self.indexspace[otheritem], 1, operator)
 
-    def addintoitem(self, item, vector, weight=1, operator=None):
+    def addintoitem(self, item:str, vector:list, weight=1, operator=None):
         if not self.contains(item):
             self.additem(item)
         if not operator is None:

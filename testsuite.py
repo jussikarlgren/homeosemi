@@ -24,7 +24,6 @@ syntest["toefl"] = {}
 syntest["esl"] = {}
 
 
-
 syntest["toefl"]["enormously"] = ["tremendously", "decidedly", "uniquely", "appropriately"]
 syntest["toefl"]["provisions"] = ["stipulations", "interrelations", "jurisdictions", "interpretations"]
 syntest["toefl"]["haphazardly"] = ["randomly", "linearly", "densely", "dangerously"]

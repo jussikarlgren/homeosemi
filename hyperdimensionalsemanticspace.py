@@ -6,8 +6,22 @@ import re
 
 from logger import logger  # Simplest possible logger, replace with any variant of your choice.
 error = True      # loglevel
-debug = True     # loglevel
+debug = False     # loglevel
 monitor = False   # loglevel
+
+
+def inputwordspace(vectorfile):
+    try:
+        cannedspace = open(vectorfile, 'rb')
+        wordspace = pickle.load(cannedspace)
+        return wordspace
+    except IOError:
+        logger("Could not read from >>" + vectorfile + "<<", error)
+        return SemanticSpace()
+
+
+def similarity(vector, anothervector):
+    return sparsevectors.sparsecosine(vector, anothervector)
 
 
 class SemanticSpace:
@@ -19,10 +33,9 @@ class SemanticSpace:
         self.tagged = {}        # dict: string - list: str
         self.dimensionality = dimensionality
         self.denseness = denseness
-        self.permutationcollection = {}
-        self.permutationcollection["nil"] = list(range(self.dimensionality))
-        self.permutationcollection["before"] = sparsevectors.createpermutation(self.dimensionality)
-        self.permutationcollection["after"] = sparsevectors.createpermutation(self.dimensionality)
+        self.permutationcollection = {"nil": list(range(self.dimensionality)),
+                                      "before": sparsevectors.createpermutation(self.dimensionality),
+                                      "after": sparsevectors.createpermutation(self.dimensionality)}
         self.observedfrequency = {}  # dict: string - int
         self.constantdenseness = 10
         self.languagemodel = LanguageModel()
@@ -87,7 +100,7 @@ class SemanticSpace:
             self.tagged[tag] = []
         self.tagged[tag].append(item)
 
-    def additemintoitem(self, item, otheritem, weight=1, operator=None):
+    def additemintoitem(self, item, otheritem, weight=1, permutation=None):
         """
         Update the context vector of item by adding in the index vector of otheritem multiplied by the scalar weight.
         If item is unknown, add it to the space. If otheritem is unknown add only an index vector to the space.
@@ -101,12 +114,12 @@ class SemanticSpace:
             self.additem(item)
         if otheritem not in self.indexspace:
             self.indexspace[otheritem] = sparsevectors.newrandomvector(self.dimensionality, self.denseness)
-        self.addintoitem(item, self.indexspace[otheritem], 1, operator)
+        self.addintoitem(item, self.indexspace[otheritem], weight, permutation)
 
     def addintoitem(self, item:str, vector:list, weight=1, operator=None):
         if not self.contains(item):
             self.additem(item)
-        if not operator is None:
+        if operator is not None:
             vector = sparsevectors.permute(vector,
                                            self.permutationcollection[operator])
         self.contextspace[item] = sparsevectors.sparseadd(self.contextspace[item],
@@ -136,11 +149,11 @@ class SemanticSpace:
                 self.removeitem(item)
                 self.changed = True
 
-    def comb(self):
+    def comb(self, k: float = 0.2):
         for item in self.contextspace:
-            sparsevectors.comb(self.contextspace[item], 0.2, self.dimensionality)
+            self.contextspace[item] = sparsevectors.comb(self.contextspace[item], k, self.dimensionality)
 
-    #================================================================
+    # ================================================================
     # input output wordspace
     def outputwordspace(self, filename):
         """
@@ -149,40 +162,52 @@ class SemanticSpace:
         """
         try:
             with open(filename, 'wb') as outfile:
-                itemj = {}
-                itemj["dimensionality"] = self.dimensionality
-                itemj["densenss"] = self.denseness
-                itemj["poswindow"] = self.poswindow
-                itemj["constantdensenss"] = self.constantdenseness
-                itemj["indexspace"] = self.indexspace
-                itemj["contextspace"] = self.contextspace
-                itemj["permutationcollection"] = self.permutationcollection
-                itemj["languagemodel"] = self.languagemodel
-                itemj["observedfrequency"] = self.observedfrequency
-                pickle.dump(itemj, outfile)
+                pickle.dump(self, outfile)
         except IOError:
-                logger("Could not write >>" + filename + ".toto <<", error)
+            logger("Could not write >>" + filename + ".toto <<", error)
 
-    def inputwordspace(self, vectorfile):
-        try:
-            cannedspace = open(vectorfile, 'rb')
-            itemj = pickle.load(cannedspace)
-            self.dimensionality = itemj["dimensionality"]
-            self.denseness = itemj["densenss"]
-            self.poswindow = itemj["poswindow"]
-            self.constantdenseness = itemj["constantdensenss"]
-            self.indexspace = itemj["indexspace"]
-            self.contextspace = itemj["contextspace"]
-            self.permutationcollection = itemj["permutationcollection"]
-            self.languagemodel = itemj["languagemodel"]
-            try:
-                self.observedfrequency = itemj["observedfrequency"]
-            except KeyError:
-                self.observedfrequency = {}
-                for knownitem in self.contextspace:
-                    self.observedfrequency[knownitem] = 1
-        except IOError:
-            logger("Could not read from >>" + vectorfile + "<<", error)
+    #
+    # def outputwordspace(self, filename):
+    #     """
+    #     Save wordspace to disk.
+    #     :param filename: str
+    #     """
+    #     try:
+    #         with open(filename, 'wb') as outfile:
+    #             itemj = {}
+    #             itemj["dimensionality"] = self.dimensionality
+    #             itemj["densenss"] = self.denseness
+    #             itemj["poswindow"] = self.poswindow
+    #             itemj["constantdensenss"] = self.constantdenseness
+    #             itemj["indexspace"] = self.indexspace
+    #             itemj["contextspace"] = self.contextspace
+    #             itemj["permutationcollection"] = self.permutationcollection
+    #             itemj["languagemodel"] = self.languagemodel
+    #             itemj["observedfrequency"] = self.observedfrequency
+    #             pickle.dump(itemj, outfile)
+    #     except IOError:
+    #             logger("Could not write >>" + filename + ".toto <<", error)
+    #
+    # def inputwordspace(self, vectorfile):
+    #     try:
+    #         cannedspace = open(vectorfile, 'rb')
+    #         itemj = pickle.load(cannedspace)
+    #         self.dimensionality = itemj["dimensionality"]
+    #         self.denseness = itemj["densenss"]
+    #         self.poswindow = itemj["poswindow"]
+    #         self.constantdenseness = itemj["constantdensenss"]
+    #         self.indexspace = itemj["indexspace"]
+    #         self.contextspace = itemj["contextspace"]
+    #         self.permutationcollection = itemj["permutationcollection"]
+    #         self.languagemodel = itemj["languagemodel"]
+    #         try:
+    #             self.observedfrequency = itemj["observedfrequency"]
+    #         except KeyError:
+    #             self.observedfrequency = {}
+    #             for knownitem in self.contextspace:
+    #                 self.observedfrequency[knownitem] = 1
+    #     except IOError:
+    #         logger("Could not read from >>" + vectorfile + "<<", error)
 
     def importgavagaiwordspace(self, vectorfile:str, threshold=5):
         vectorpattern = re.compile(r"\(\"(.*)\" #S(\d+);([\d\+\-\;]+): #S\d+;(.+): (\d+)\)",
@@ -238,9 +263,6 @@ class SemanticSpace:
     def items(self):
         return self.indexspace.keys()
 
-    def similarity(self, vector, anothervector):
-        return sparsevectors.sparsecosine(vector, anothervector)
-
     def contextsimilarity(self, item, anotheritem):
         return sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[anotheritem])
 
@@ -252,17 +274,17 @@ class SemanticSpace:
 
     def contextneighbours(self, item: str, number: int=10, weights: bool=False,
                           filtertag: bool=False, threshold: int=-1) -> list:
-        '''
+        """
         Return the items from the contextspace most similar to the given item. I.e. items which have similar
         neighbours to the item. Specify number of items desired (0 will give all), if weights are desired, if
         only items with the same tag are desired, and if thresholding to a certain horizon is desired.
-        '''
+        """
         neighbourhood = {}
         if filtertag:
             targetset = self.tagged[self.tag[item]]
         else:
             targetset = self.contextspace
-        for i in targetset:
+        for i in targetset:  # was: for i in self.contextspace:
             if i == item:
                 continue
             k = sparsevectors.sparsecosine(self.contextspace[item], self.contextspace[i])
@@ -271,16 +293,16 @@ class SemanticSpace:
         if not number:
             number = len(neighbourhood)
         if weights:
-            r = sorted(neighbourhood.items(), key=lambda k: neighbourhood[k[0]], reverse=True)[:number]
+            r = sorted(neighbourhood.items(), key=lambda m: neighbourhood[m[0]], reverse=True)[:number]
         else:
-            r = sorted(neighbourhood, key=lambda k: neighbourhood[k], reverse=True)[:number]
+            r = sorted(neighbourhood, key=lambda m: neighbourhood[m], reverse=True)[:number]
         return r
 
     def contexttoindexneighbours(self, item, number=10, weights=False, permutationname="nil"):
-        '''
+        """
         Return the items whose index vectors are most similar to the given item's context vector. I.e. items which
         have occurred in contexts with the item.
-        '''
+        """
         permutation = self.permutationcollection[permutationname]
         neighbourhood = {}
         for i in self.indexspace:

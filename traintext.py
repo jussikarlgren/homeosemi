@@ -1,17 +1,15 @@
 import hyperdimensionalsemanticspace
 from nltk import word_tokenize
 from nltk import sent_tokenize
-import languagemodel
+from languagemodel import LanguageModel
 
-resourcedirectory = "/some/path/to/resources/"    # configure this appropriately
-languagemodel = languagemodel.LanguageModel()
-languagemodel.importstats(resourcedirectory + "term-tab-frequency-list.file")  # insert file name here
 
-cspace = hyperdimensionalsemanticspace.SemanticSpace()
-cspace.addoperator("before")
-cspace.addoperator("after")
-
-dspace = hyperdimensionalsemanticspace.SemanticSpace()
+#  "/some/path/to/resources/"
+#  "term-tab-frequency-list.file"
+def uselanguagemodel(resourcedirectory:str="/home/jussi/data", resourcefile:str="enfreqfilteredmin10.list"):
+    languagemodel = LanguageModel()
+    languagemodel.importstats(resourcedirectory + "/" + resourcefile)
+    return languagemodel
 
 
 def weight(item: str):
@@ -19,6 +17,10 @@ def weight(item: str):
 
 
 def trainusingtext(text: str, window: int=2):
+    cspace = hyperdimensionalsemanticspace.SemanticSpace()
+    cspace.addoperator("before")
+    cspace.addoperator("after")
+    dspace = hyperdimensionalsemanticspace.SemanticSpace()
     sentences = sent_tokenize(text.lower())
     for sentence in sentences:
         ii = 0

@@ -1,0 +1,56 @@
+{
+  "_comment": "Coarse Levin-style semantic verb classes for frequent lexical verbs. Hand-curated (VerbNet unavailable offline). Used (a) as the word_levin class overlay and (b) to define class prototypes for the regular/irregular split. Auxiliaries and function words are intentionally excluded.",
+  "classes": ["motion_directed", "manner_motion", "caused_motion", "transfer",
+              "communication", "perception", "psych_desire", "cognition",
+              "change_of_state", "creation", "consumption", "contact_impact", "aspectual"],
+  "verbs": {
+    "go": "motion_directed", "come": "motion_directed", "fall": "motion_directed",
+    "move": "motion_directed", "rise": "motion_directed", "arrive": "motion_directed",
+    "return": "motion_directed", "leave": "motion_directed", "enter": "motion_directed",
+
+    "run": "manner_motion", "walk": "manner_motion", "jump": "manner_motion",
+    "sit": "manner_motion", "stand": "manner_motion", "climb": "manner_motion",
+    "swim": "manner_motion", "dance": "manner_motion", "fly": "manner_motion",
+
+    "put": "caused_motion", "throw": "caused_motion", "push": "caused_motion",
+    "pull": "caused_motion", "carry": "caused_motion", "lay": "caused_motion",
+    "set": "caused_motion", "drop": "caused_motion",
+
+    "give": "transfer", "take": "transfer", "bring": "transfer", "send": "transfer",
+    "buy": "transfer", "get": "transfer", "show": "transfer", "pay": "transfer",
+    "offer": "transfer", "lend": "transfer",
+
+    "say": "communication", "tell": "communication", "ask": "communication",
+    "talk": "communication", "call": "communication", "speak": "communication",
+    "answer": "communication", "shout": "communication", "explain": "communication",
+
+    "see": "perception", "hear": "perception", "watch": "perception",
+    "look": "perception", "feel": "perception", "notice": "perception",
+    "smell": "perception",
+
+    "want": "psych_desire", "like": "psych_desire", "love": "psych_desire",
+    "need": "psych_desire", "hope": "psych_desire", "wish": "psych_desire",
+    "hate": "psych_desire", "fear": "psych_desire", "enjoy": "psych_desire",
+
+    "know": "cognition", "think": "cognition", "believe": "cognition",
+    "understand": "cognition", "remember": "cognition", "find": "cognition",
+    "forget": "cognition", "wonder": "cognition", "guess": "cognition",
+
+    "open": "change_of_state", "close": "change_of_state", "turn": "change_of_state",
+    "break": "change_of_state", "grow": "change_of_state", "die": "change_of_state",
+    "change": "change_of_state", "burn": "change_of_state",
+
+    "make": "creation", "write": "creation", "build": "creation", "draw": "creation",
+    "cook": "creation", "paint": "creation",
+
+    "eat": "consumption", "drink": "consumption", "taste": "consumption",
+    "bite": "consumption", "chew": "consumption",
+
+    "hit": "contact_impact", "touch": "contact_impact", "catch": "contact_impact",
+    "hold": "contact_impact", "kick": "contact_impact", "cut": "contact_impact",
+    "wash": "contact_impact", "press": "contact_impact",
+
+    "start": "aspectual", "stop": "aspectual", "keep": "aspectual",
+    "begin": "aspectual", "finish": "aspectual", "continue": "aspectual"
+  }
+}

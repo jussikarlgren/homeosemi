@@ -1,0 +1,29 @@
+Here's the hypothesis about TMA.
+
+Clauses have different functions. Some represent states, some processes, some momentary occurrences some unlikely or impossible situations.
+
+Each of these needs a separate RI vector.
+
+State: The sun shines, The house is yellow
+Process: It rains, The ball is rolling, The water is boiling
+Occurrence: The window broke, The kettle boiled over
+Unreal: I would like to be rich
+
+These three distinctive types are encoded in verb tense, adverbials, auxiliaries, clause structure, lexical choice, or transitivity.
+
+State clauses are in present and frequently not very modified (since they typically encode background information)
+Process clauses are more in the foreground, and are frequently in the progressive tense.
+Occurrence clauses have typically greater information value and are the marked case: they have adverbials such as suddenly, are in simple past tense, and have other perfective markers. They are also typically highly transitive (see Halliday's extended notion of transitivity.)
+Unreal clauses are, conditionals by tense or by clausal structure, often include the speaker.  
+
+Each of these four cases of clause needs its own TMA vector. I want that vector added to EACH word in such clauses.
+
+The elements that encode this deserve their own class vector. Claude suggested
+
+claude> The linguistically motivated fix is to give each layer its own overlay vector:
+claude>
+claude>    - tma_vec_A — auxiliaries (be/have/do + inflected forms): marks grammatical tense/aspect
+claude>    - tma_vec_B — modals (should/can/will/would…): marks deontic/epistemic/predictive modality
+claude>    - tma_vec_C — temporal adverbials (now/yesterday/soon/already…): marks temporal anchoring
+
+and this might be a good idea. 

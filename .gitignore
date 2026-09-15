@@ -1,0 +1,19 @@
+# Regenerable / large — do not commit (see HOW_TO_RESUME.md "Moving to another machine")
+experiments/data/
+experiments/runs/
+experiments/blimp/
+
+# Nested repositories (versioned separately)
+nanoGPT/
+jussipyutils/
+
+# Python / tooling
+__pycache__/
+*.pyc
+.claude/
+
+# Editor backups / scratch
+*~
+# Emacs auto-save (#file#) and lock (.#file) files
+\#*\#
+.\#*

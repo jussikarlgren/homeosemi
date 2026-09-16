@@ -962,6 +962,13 @@ well-formed simple sentences reduce catastrophic low-data overfitting.
 
 ## 3. BLiMP: augmentation teaches *some* constructions and distorts others
 
+> **Correction (2026-09-16):** the numbers in this section were computed with the buggy
+> checkpoint loader. Re-run with the fix, the two headline v1 effects **hold**: learned
+> anaphor agreement 0.478→0.630 (**+0.152**, was +0.178) and learned binding 0.597→0.525
+> (**−0.072**, was −0.066). The main change is that the *category*-encoding anaphor gain
+> weakens (+0.045 → **+0.007**, i.e. essentially learned-only). See §6 for the corrected
+> v1→v2 table; the per-paradigm figures just below are pre-fix.
+
 BLiMP on seed-1337/42/2024 checkpoints, per-phenomenon mean ± std (flat → aug).
 Overall accuracy is unchanged (category 0.483→0.477, learned 0.495→0.494) — as
 expected at the 100k floor — so the signal is entirely per-category:
@@ -1020,7 +1027,7 @@ are robust. BLiMP at this data/model scale must be reported with a seed band.
 - **Overall BLiMP is a floor at 100k** (~0.48–0.50); these are per-phenomenon
   representational effects, not aggregate competence gains.
 
-## 6. Targeted fixes (v2) — the fixes work but trade off against each other
+## 6. Targeted fixes (v2) — v1 effects are real, but the v2 fixes barely move the targets
 
 Both failure modes above were re-engineered and the whole pipeline re-run (3 seeds,
 same interleave, same shared val); only the two broken constructions were swapped,
@@ -1033,38 +1040,34 @@ the other nine kept:
   clause binding by the *nearer* subject, and reflexive-vs-pronoun domain minimal pairs
   — replacing the earlier surface-reflexive top-up.
 
-BLiMP (3-seed mean), flat → v1 → v2:
+BLiMP (3-seed mean), flat → v1 → v2. *(Corrected 2026-09-16 with the fixed checkpoint
+loader — these numbers and the conclusion differ materially from the original, which was
+computed on corrupted models; see the loader-bug note.)*
 
 | Phenomenon | word_category | word_learned |
 |---|---|---|
-| quantifiers | 0.397 → 0.417 → **0.454** | 0.551 → 0.474 → **0.510** |
-| binding | 0.643 → 0.549 → **0.608** | 0.586 → 0.520 → **0.558** |
-| anaphor agreement | 0.571 → 0.616 → **0.486** | 0.432 → 0.609 → **0.460** |
+| quantifiers | 0.693 → 0.679 → 0.621 | 0.681 → 0.640 → 0.650 |
+| binding | 0.603 → 0.505 → 0.532 | 0.597 → 0.525 → 0.534 |
+| anaphor agreement | 0.545 → 0.552 → 0.513 | 0.478 → 0.630 → 0.598 |
 
-**Both fixes worked on their targets.** *Binding* recovered most of the v1 loss
-(category −0.093→−0.034, learned −0.066→−0.028): teaching the licensing *structure*
-(local vs embedded domain, reflexive vs pronoun) reversed the damage that surface
-reflexives had done. *Quantifiers* partially recovered (learned −0.077→−0.041;
-category +0.020→+0.058): removing existential-*there* + strong-quantifier lines
-removed most of the wrong-generalisation signal. This confirms the v1 diagnosis was
-mechanistically correct — the regressions were caused by teaching surface form
-without licensing constraint, and supplying the constraint fixes them.
+**v1's core effects are real and survive the loader fix.** The augmentation robustly
+teaches anaphor agreement for the learned encoding (0.478 → 0.630, **+0.152**) and hurts
+binding (learned −0.072, category −0.098) — supplying a construction's surface form
+without its licensing constraint teaches the wrong grammar, exactly as diagnosed.
 
-**But the binding fix cost the anaphor-agreement win.** v1's robust anaphor gain
-(+0.045 / +0.178) collapsed in v2 (−0.085 / +0.028). The cause is the binding fix
-itself: the reflexive-vs-pronoun minimal pairs ("*The girl sees herself*" **and**
-"*The girl sees her*") taught that a pronoun is acceptable in reflexive-like frames,
-diluting the model's preference for the agreeing reflexive — exactly what the
-anaphor-*agreement* paradigms measure. (v2 anaphor variance is high, std ≈0.10, so
-part is noise, but the large v1 win did not reproduce.)
+**But the v2 "fixes" barely moved their targets.** Binding recovered only marginally
+(learned 0.525 → 0.534, category 0.505 → 0.532 — a few points, well inside seed noise),
+and quantifiers did not clearly improve (learned +0.010, category −0.058). The structural
+Principle-A augmentation did *not* meaningfully restore binding at this scale.
 
-**The deeper finding: in a tiny, data-limited model the phenomena are not
-independently optimisable.** Teaching one distinction reshapes the geometry the
-others rely on — fixing binding directly undercut anaphor agreement, because the very
-pronoun/reflexive contrast that teaches structural binding weakens pure
-reflexive-agreement preference. Construction-aligned CDS augmentation is not a set of
-additive levers; it is a single distribution whose parts interact. At this scale you
-trade phenomena against each other rather than accumulating them.
+**And — contrary to the original (corrupted) report — v2 did NOT cost the
+anaphor-agreement win.** The learned anaphor gain is largely retained in v2 (0.598, still
+**+0.120** over flat); it did not collapse. The earlier "the binding fix sacrificed the
+anaphor win, so the phenomena are not independently optimisable" conclusion was an
+artefact of the loader bug and **does not hold**. The corrected picture is simpler and
+less dramatic: the augmentation carries a persistent anaphor↑ / binding↓ signature
+(the same one seen in the larger-model test), and the v2 licensing tweaks were too weak to
+change it — not a sharp phenomenon-vs-phenomenon trade-off.
 
 ## 7. Larger-model test — is the trade-off a capacity bottleneck? (No)
 
@@ -1081,32 +1084,30 @@ CPU. The comparison is seed-matched, so tiny→big isolates model capacity.
 2.710→2.667 at seed 1337; direction holds across seeds), consistent with the
 regularisation story — this is not a fitting artefact.
 
-**BLiMP, flat→aug delta (mean ± sd, 3 seeds), tiny vs big:**
+**BLiMP, flat→aug delta (mean ± sd, 3 seeds), tiny vs big.** *(Corrected 2026-09-16 with
+the fixed checkpoint loader — the earlier "~4× sharpening" headline was largely a loader
+artefact; see below.)*
 
 | Phenomenon | learned tiny 128d | learned **big 384d** | category tiny | category **big** |
 |---|---|---|---|---|
-| anaphor agreement | +0.028 ± 0.050 | **+0.128 ± 0.038** | −0.085 ± 0.097 | −0.037 ± 0.088 |
-| binding | −0.028 ± 0.025 | **−0.122 ± 0.036** | −0.034 ± 0.016 | −0.075 ± 0.024 |
-| quantifiers | −0.041 ± 0.067 | +0.054 ± 0.016 | +0.058 ± 0.132 | −0.047 ± 0.068 |
+| anaphor agreement | +0.120 ± 0.035 | +0.147 ± 0.025 | −0.032 ± 0.018 | +0.007 ± 0.103 |
+| binding | −0.063 ± 0.015 | −0.095 ± 0.036 | −0.070 ± 0.021 | −0.088 ± 0.023 |
+| quantifiers | −0.031 ± 0.064 | +0.064 ± 0.067 | −0.071 ± 0.025 | +0.020 ± 0.019 |
 
-(The tiny 3-seed deltas here reproduce the §6 v2 numbers, validating the aggregation.)
+**The trade-off does not dissolve — but it does not dramatically sharpen either.** For the
+learned encoding the augmentation's anaphor-agreement gain (+0.120) and binding loss
+(−0.063) are both present *at the tiny scale already*, and grow only modestly with capacity
+(+0.147, −0.095) — an increment comparable to the seed bands, not the ~4× jump the corrupt
+loader had suggested. So capacity **mildly amplifies** the anaphor↑/binding↓ signature; it
+does not create it and does not remove it. The category encoding shows the same binding
+loss at both scales (−0.070 → −0.088). Quantifiers are noisy.
 
-**The trade-off does not dissolve — for the learned encoding it sharpens into a clean,
-significant anti-correlation.** With more capacity the anaphor-agreement gain grows ~4×
-(+0.028→+0.128) *and* the binding loss grows ~4× (−0.028→−0.122); both bands are now
-well clear of zero, where at tiny scale they overlapped it. The extra capacity does not
-buy independent optimisability — it lets the model commit *harder* to the augmentation's
-surface reflexive regularity, amplifying both the intended morphological gain and the
-collateral binding damage. Quantifiers improve at 384d (+0.054 ± 0.016), so the v2 quant
-fix benefits from capacity, but that does not offset the locked anaphor/binding trade.
-The category encoding stays noisier and augmentation mildly hurts/neutral on BLiMP at
-both scales (only robust effect: binding −0.075 ± 0.024); category aug helps BPC but not
-BLiMP, reinforcing that its benefit is regularisation, not grammatical acquisition.
-
-**Conclusion.** The entanglement is a property of the augmentation *distribution*
-(reflexive surface form taught without Principle-A licensing), not a capacity
-bottleneck. Scaling the model makes it worse, not better. The lever is the data —
-correct licensing constraints in the augmentation — not model size.
+**Conclusion (unchanged in direction, softened in degree).** The anaphor/binding
+trade-off is a property of the augmentation *distribution* (reflexive surface form taught
+without Principle-A licensing) and is present regardless of model size — it is **not a
+capacity bottleneck**, and extra capacity neither dissolves it nor sharpens it much. The
+lever remains the data (correct licensing constraints), not model size. *(The original
+headline — a clean ~4× capacity-driven sharpening — did not survive the loader fix.)*
 
 ---
 
@@ -1173,22 +1174,23 @@ sub-categorization has helped**: the earlier *arbitrary* structural sub-split hu
 
 BLiMP on the 100k checkpoints (3 seeds), argument-structure group = {transitive,
 intransitive, causative, inchoative, drop_argument, passive_1/2,
-animate_subject_passive, animate_subject_trans}:
+animate_subject_passive, animate_subject_trans}. *(Corrected 2026-09-16 with the fixed
+checkpoint loader — see the loader-bug note; the conclusion is unchanged.)*
 
 | encoding | overall | argstr-group |
 |---|---:|---:|
-| word_learned | 0.498 ± 0.011 | 0.571 ± 0.010 |
-| word_category | 0.485 ± 0.015 | 0.559 ± 0.015 |
-| word_frame | 0.492 ± 0.014 | 0.558 ± 0.010 |
+| word_learned | 0.529 ± 0.004 | 0.570 ± 0.006 |
+| word_category | 0.525 ± 0.004 | 0.560 ± 0.007 |
+| word_frame | 0.537 ± 0.007 | 0.555 ± 0.005 |
 
 The frame prior does **not** improve the targeted argument-structure paradigms:
-`word_frame` − `word_category` = −0.001 on the group, and every per-paradigm delta is
-within seed noise (largest: transitive +0.020, inchoative +0.019; passive_1 −0.030).
-Overall BLiMP sits at chance for all three. So the substantial, seed-robust −0.088 BPC
+`word_frame` − `word_category` = −0.005 on the group (within seed noise), and overall
+BLiMP is near chance for all three. So the substantial, seed-robust −0.088 BPC
 improvement at 100k is **distributional regularisation, not grammatical acquisition** — a
 frozen input-embedding bias lowers next-word perplexity but does not confer verb-specific
-selectional discrimination on minimal pairs at this scale. This mirrors the
-construction-augmentation finding that BPC and targeted BLiMP move independently.
+selectional discrimination on minimal pairs at this scale. (This null was one of the few
+findings *unchanged* by the loader fix — because BLiMP scores a good-vs-bad *ranking*,
+which the corruption perturbed far less than absolute NLL.)
 
 ## 5. Conclusions
 
@@ -1304,9 +1306,18 @@ buggy way gives BPC-equiv 3.42 (and ranks it *worse* than learned); loading it c
 never via `load_model`) and the frame-reliability curve. The encoding findings that rest
 on BPC stand.
 
-**Affected (being re-run with the fixed loader; sections above to be corrected):**
-- "Verb subcategorization-frame encoding" §4 (BLiMP argument-structure null).
-- "Larger-model test" §7 (the anaphor/binding trade-off deltas).
-- "Construction-aligned child-directed augmentation" §3/§6 (v1/v2 phenomenon trade-offs).
+**Affected — all 39 checkpoints re-run with the fixed loader (2026-09-16); outcomes:**
+- **Verb-frame §4 (arg-structure null): SURVIVES.** Corrected numbers are almost identical
+  (frame−category −0.005); still a null. BLiMP scores a good-vs-bad *ranking*, which the
+  corruption perturbed far less than absolute NLL — hence little change here.
+- **Larger-model §7 (capacity sharpens the trade-off): SOFTENED.** The anaphor↑/binding↓
+  trade-off is present at *both* scales and grows only modestly with capacity (learned
+  anaphor +0.120→+0.147, binding −0.063→−0.095) — not the ~4× sharpening originally
+  claimed. Direction (not a capacity bottleneck) holds; the dramatic-sharpening headline
+  does not.
+- **Construction-aug §3/§6 (phenomena trade off): PARTLY RETRACTED.** v1's effects are real
+  (learned anaphor +0.152, binding −0.072), but the "v2 binding fix cost the anaphor win,
+  so phenomena aren't independently optimisable" conclusion was a loader artefact — v2
+  actually retains the anaphor win and barely moves binding.
 
-The overregularization section above already uses the fixed loader.
+The overregularization section already used the fixed loader (unaffected).

@@ -1321,3 +1321,73 @@ on BPC stand.
   actually retains the anaphor win and barely moves binding.
 
 The overregularization section already used the fixed loader (unaffected).
+
+---
+
+# Staged unfreeze — is structured init "no-regret"?
+
+*2026-09-17*
+
+## 1. Question
+
+The structured prior helps at low data and becomes a small handicap past the crossover.
+Can a **staged unfreeze** — freeze the grammatical scaffold (cats 2,4) early, release it
+partway through training — keep the low-data win *and* shed the high-data penalty, making
+structured init a no-regret accelerator rather than a low-data-only trick? New flag
+`--unfreeze_at_frac` (`train_experiment.py`): the freeze hook passes gradients through once
+`iter ≥ frac × max_iters`. Encoding `word_frame`, release at `f=0.5` (iter 500 of 1000),
+vs anchors always-freeze and never-freeze, and the `word_learned` baseline. 3 seeds.
+
+## 2. BPC: staged unfreeze is the best schedule at every budget (≈ no-regret)
+
+Val BPC on babylm_lit (3-seed), Δ vs learned in parentheses:
+
+| condition | 100k | 300k | 1M |
+|---|---:|---:|---:|
+| word_learned | 2.885 | 2.511 | **1.946** |
+| frame, always-freeze | 2.656 (−0.229) | 2.483 (−0.028) | 1.966 (+0.019) |
+| **frame, staged f=0.5** | **2.652 (−0.233)** | **2.476 (−0.035)** | 1.958 (**+0.012**) |
+| frame, never-freeze | 2.664 (−0.221) | 2.499 (−0.011) | 1.975 (+0.028) |
+
+**Staged unfreeze dominates both anchors at all three budgets.** It retains the full
+low-data advantage (−0.233 at 100k, matching always-freeze) and cuts the high-data penalty
+(+0.012 at 1M vs always +0.019). It is **approximately no-regret** — but not fully: a small
++0.012 residual over learned remains at 1M (≈2σ). Two mechanistic notes: (a) never-freeze
+is the *worst* at 1M (+0.028), so part of the high-data penalty is the structured **init
+basin**, not only the frozen rows — which is why releasing them doesn't fully close the gap;
+(b) never-freeze also loses part of the low-data win (−0.221 < −0.233), so the early freeze
+does add value. Releasing at a fraction and freezing early is strictly the better recipe.
+
+## 3. U-curve probe: no overregularization signature (and why)
+
+Per-verb complement-position NLL, regular vs irregular (3-seed), at the staged **mid**
+checkpoint (scaffold frozen, iter 500) vs **final** (released, iter 1000), and the clean
+release contrast (staged-final − always-final, matched iters):
+
+| budget | release effect (staged−always), reg / irr | irr−reg gap, mid → final |
+|---|---|---|
+| 100k | +0.023 / +0.019 (≈ 0) | +0.333 → +0.280 |
+| 1M | −0.003 / −0.003 (≈ 0) | +0.071 → +0.077 |
+
+**Releasing the scaffold does not disproportionately help irregular verbs** — the release
+effect is ≈0 for both buckets at both budgets, and the irregular−regular gap is essentially
+constant across the boundary. **No U-curve.** The reason is mechanistic and worth stating:
+the frozen scaffold is cats 2,4 = **function words**, whereas verb-complement idiosyncrasy
+lives in the (always-trainable) **verb** rows. Releasing function-word rows was never going
+to lexicalize irregular verbs. A proper time-axis verb U-curve needs the extension below.
+
+## 4. Conclusions
+
+- **Staged unfreeze is the best structured-init schedule found** — no worse than
+  always-freeze anywhere, and it nearly eliminates the high-data penalty. For a training
+  regime this is the actionable form of the result: freeze the grammatical scaffold for the
+  first half, then release it.
+- **Not fully no-regret at f=0.5:** a small 1M residual remains, partly attributable to the
+  structured init basin (never-freeze is worst at high data). Sweeping `f` earlier, or
+  addressing the init, is the path to closing it.
+- **The overregularization U-curve is absent here by construction** — the released rows are
+  function words, not verbs.
+
+**Follow-up (the real verb U-curve):** freeze the *verb/frame* rows early and release them
+at the boundary (freeze the rule, then lexicalize), and track irregular-verb NLL across it.
+That is the design that could actually show dip-then-recovery on exceptions.

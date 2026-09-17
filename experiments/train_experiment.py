@@ -92,13 +92,16 @@ def get_lr(it, max_iters, lr, lr_min, n_phases):
 
 
 def build_model(cfg, encoding_matrix, freeze_all, untie, device,
-                freeze_row_mask=None):
+                freeze_row_mask=None, unfreeze_iter=None, unfreeze_state=None):
     """Build GPT, optionally inject encoding_matrix into wte.
 
     freeze_all      : freeze the entire wte (all rows)
     freeze_row_mask : 1-D bool tensor of length vocab_size; True = frozen row.
                       Used for per-category partial freezing.
                       If set, freeze_all is ignored.
+    unfreeze_iter   : if set (with unfreeze_state), the frozen rows are released once
+                      unfreeze_state["iter"] >= unfreeze_iter (staged unfreeze). Grads
+                      flow to all rows from then on; requires_grad stays True throughout.
     """
     model = GPT(cfg)
     if untie:
@@ -112,10 +115,13 @@ def build_model(cfg, encoding_matrix, freeze_all, untie, device,
         if freeze_row_mask is not None:
             # per-category partial freeze via backward hook
             frozen_rows = freeze_row_mask.to(device)  # bool, shape (vocab,)
+            keep = (~frozen_rows).float().unsqueeze(1)  # (vocab, 1)
             def _grad_mask_hook(grad):
-                # zero out gradients for frozen rows
-                mask = (~frozen_rows).float().unsqueeze(1)  # (vocab, 1)
-                return grad * mask
+                # staged unfreeze: once past the boundary, let all gradients through
+                if (unfreeze_iter is not None and unfreeze_state is not None
+                        and unfreeze_state["iter"] >= unfreeze_iter):
+                    return grad
+                return grad * keep
             model.transformer.wte.weight.register_hook(_grad_mask_hook)
         elif freeze_all:
             model.transformer.wte.weight.requires_grad_(False)
@@ -168,6 +174,9 @@ def main():
     # embedding control
     ap.add_argument("--freeze", action="store_true",
                     help="freeze entire injected embedding (all rows)")
+    ap.add_argument("--unfreeze_at_frac", type=float, default=None,
+                    help="staged unfreeze: release the frozen rows after this fraction "
+                         "of max_iters (e.g. 0.5). Needs --freeze_categories.")
     ap.add_argument("--freeze_categories", default="2,4,5,6,7",
                     help="comma-separated category ids to freeze (word-level only); "
                          "empty string disables. Default: '2,4,5,6,7' "
@@ -278,8 +287,15 @@ def main():
     cfg = GPTConfig(block_size=args.block_size, vocab_size=vocab_size,
                     n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd,
                     dropout=args.dropout, bias=False)
+    unfreeze_state = {"iter": 0}
+    unfreeze_iter = (int(args.unfreeze_at_frac * args.max_iters)
+                     if args.unfreeze_at_frac is not None else None)
     model = build_model(cfg, enc_matrix, args.freeze, not args.no_untie,
-                        args.device, freeze_row_mask=freeze_row_mask)
+                        args.device, freeze_row_mask=freeze_row_mask,
+                        unfreeze_iter=unfreeze_iter, unfreeze_state=unfreeze_state)
+    if unfreeze_iter is not None:
+        print(f"[{tag}] staged unfreeze: frozen rows released at iter {unfreeze_iter} "
+              f"(frac {args.unfreeze_at_frac})")
 
     # ── optimizer (embedding rows in separate group with wd=0 if partially frozen)
     if freeze_row_mask is not None and freeze_row_mask.any():
@@ -303,10 +319,25 @@ def main():
               f"lr {args.lr}->{args.lr_min} per phase")
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.99))
 
+    def save_ckpt(ckpt_dir):
+        os.makedirs(ckpt_dir, exist_ok=True)
+        torch.save(model.state_dict(), os.path.join(ckpt_dir, "model.pt"))
+        with open(os.path.join(ckpt_dir, "config.json"), "w") as f:
+            json.dump({"vocab_size": vocab_size, "n_layer": args.n_layer,
+                       "n_head": args.n_head, "n_embd": args.n_embd,
+                       "block_size": args.block_size, "bias": False,
+                       "data_dir": args.data_dir, "tag": tag}, f, indent=2)
+
     # ── training loop ────────────────────────────────────────────────────────
     history = []
     t0 = time.time()
     for it in range(args.max_iters + 1):
+        unfreeze_state["iter"] = it
+        # save a checkpoint at the unfreeze boundary (for the U-curve probe)
+        if (unfreeze_iter is not None and it == unfreeze_iter
+                and args.save_checkpoint):
+            save_ckpt(os.path.join(args.out_dir, f"{tag}_mid_ckpt"))
+            print(f"[{tag}] mid checkpoint saved at unfreeze boundary (iter {it})")
         # apply LR schedule
         if args.n_phases > 1 or args.lr_min != args.lr:
             lr_now = get_lr(it, args.max_iters, args.lr, args.lr_min, args.n_phases)
@@ -354,20 +385,7 @@ def main():
 
     if args.save_checkpoint:
         ckpt_dir = os.path.join(args.out_dir, f"{tag}_ckpt")
-        os.makedirs(ckpt_dir, exist_ok=True)
-        torch.save(model.state_dict(),
-                   os.path.join(ckpt_dir, "model.pt"))
-        with open(os.path.join(ckpt_dir, "config.json"), "w") as f:
-            json.dump({
-                "vocab_size":  vocab_size,
-                "n_layer":     args.n_layer,
-                "n_head":      args.n_head,
-                "n_embd":      args.n_embd,
-                "block_size":  args.block_size,
-                "bias":        False,
-                "data_dir":    args.data_dir,
-                "tag":         tag,
-            }, f, indent=2)
+        save_ckpt(ckpt_dir)
         print(f"[{tag}] checkpoint saved to {ckpt_dir}")
 
 

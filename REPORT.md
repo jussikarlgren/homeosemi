@@ -1391,3 +1391,61 @@ to lexicalize irregular verbs. A proper time-axis verb U-curve needs the extensi
 **Follow-up (the real verb U-curve):** freeze the *verb/frame* rows early and release them
 at the boundary (freeze the rule, then lexicalize), and track irregular-verb NLL across it.
 That is the design that could actually show dip-then-recovery on exceptions.
+
+---
+
+# Verb U-curve — freezing the class *rule*, then releasing it
+
+*2026-09-18*
+
+## 1. Design
+
+The staged-unfreeze U-curve was null because the released rows were function words, not
+verbs. Here we freeze the **verbs** (cat 3, 1037 rows) — pinning them to their structured
+init during the scaffold phase — and release at `f=0.5`. The pivotal contrast is the
+*encoding*: `word_levin` pins each verb toward its **shared Levin-class vector** (a pure
+*rule* — irregular/class-deviant verbs are mis-pinned to the class average), whereas
+`word_frame` pins each verb to its **own induced frame** (already lexicalized). Prediction:
+releasing the freeze lets mis-pinned verbs lexicalize, so **irregular** verbs should
+improve disproportionately — but only for the *rule* encoding (`word_levin`), and only
+where there's enough data to lexicalize (1M, not 100k). `word_{levin,frame}` ×
+{staged, always-freeze-verbs} × {100k, 1M} × 3 seeds.
+
+## 2. Result — a reliable, rule-specific, data-gated overregularization signature
+
+Per-verb complement-position NLL (3-seed), split regular vs irregular. **Release effect** =
+staged-final − always-final (both iter 1000; differ only in whether verbs were released at
+iter 500). **Irr-specific gain** = (irr release) − (reg release); negative = releasing
+helps irregular verbs *more* (the U-curve / lexicalize-the-exceptions signature).
+
+| enc | budget | release effect reg / irr | irr-specific gain (mean ± sd, 3 seeds) |
+|---|---|---|---|
+| **levin** (rule) | **1M** | −0.156 / −0.200 | **−0.044 ± 0.014** (−0.026, −0.058, −0.049) |
+| frame (lexical) | 1M | −0.177 / −0.189 | −0.011 ± 0.041 (+0.047, −0.044, −0.037) |
+| levin | 100k | +0.147 / +0.142 | −0.004 |
+| frame | 100k | +0.051 / +0.107 | +0.056 |
+
+**The prediction holds.** Releasing frozen verbs at 1M recovers a large amount for *both*
+encodings (main effect ≈ −0.16 to −0.20 nats — frozen verbs are a real handicap at high
+data). Riding on that recovery is the differential: for the **class-rule encoding
+(`word_levin`)** the recovery is **reliably concentrated on irregular verbs** — irr-specific
+gain −0.044 ± 0.014, negative in all three seeds. For the **item-lexicalized encoding
+(`word_frame`)** there is **no reliable concentration** (−0.011 ± 0.041, spans zero): its
+frozen init already carried each verb's own frame, so irregulars were never systematically
+mis-pinned. And at **100k** neither encoding shows the effect (≈0) — you need enough data
+to lexicalize the exceptions.
+
+This is the genuine **time-axis analog of child overregularization** the data-axis and
+function-word-scaffold probes could not produce: a frozen *rule* over-regularises the
+exceptions, and releasing it lets them lexicalize, disproportionately improving the
+irregular items — specifically when the representation is a **class rule** (not a per-item
+init) and when there is **enough data** to support lexicalization.
+
+## 3. Honest bounds
+
+The effect is small (~0.04 nats) and rides on a much larger main recovery; the `levin` and
+`frame` bands overlap, so the clean claim is "**reliably non-zero for the rule encoding,
+not reliable for the item-init encoding**," not a cleanly separated ratio. Still, the
+*rule-specificity* (3/3 seeds for levin, sign-flipping for frame) and the *data-gating*
+(absent at 100k) are exactly the qualitative pattern overregularization predicts.
+Artifacts: `experiments/vfz_ucurve.py`, `vfz_band.py`; runs `word_{levin,frame}_vfz_*`.

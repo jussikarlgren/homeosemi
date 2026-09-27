@@ -205,6 +205,14 @@ def main():
                     default=os.path.join(_ROOT, "experiments", "runs"))
     ap.add_argument("--save_checkpoint", action="store_true",
                     help="save model.pt + config.json after training (needed for BLiMP eval)")
+    # acquisition-vs-regularisation controls (experiments/overlay_variants.py)
+    ap.add_argument("--scramble_overlay", action="store_true",
+                    help="Exp A: seeded permutation of the assignment bundles - a "
+                         "magnitude/scale-matched control that destroys linguistic content")
+    ap.add_argument("--overlay_categories", default="",
+                    help="Exp B: comma-separated primary-category ids to KEEP overlaid; "
+                         "all other words gated to residual (0). Run with tma/frame/levin "
+                         "alphas at 0 so only the primary overlay is subset-gated.")
     args = ap.parse_args()
 
     tag = args.tag or args.encoding
@@ -221,6 +229,20 @@ def main():
     tma_categories  = meta.get("tma_distributions", meta.get("tma_categories", None))
     frame_categories = meta.get("frame_distributions", None)
     levin_categories = meta.get("levin_classes", None)
+
+    # ── acquisition-vs-regularisation variants (default off; see overlay_variants.py) ──
+    if args.scramble_overlay:
+        from overlay_variants import scramble_maps
+        word_categories, tma_categories, frame_categories, levin_categories = scramble_maps(
+            args.seed, vocab,
+            word_categories, tma_categories, frame_categories, levin_categories)
+        tag = f"{tag}_scrambled"
+    if args.overlay_categories:
+        from overlay_variants import gate_categories
+        _on_ids = [int(x) for x in args.overlay_categories.split(",") if x.strip()]
+        word_categories = gate_categories(word_categories, _on_ids)
+        tag = f"{tag}_on{''.join(str(i) for i in _on_ids)}"
+
     char_counts = {
         "train": meta.get("train_char_count", 0),
         "val":   meta.get("val_char_count", 0),

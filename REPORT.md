@@ -1449,3 +1449,72 @@ not reliable for the item-init encoding**," not a cleanly separated ratio. Still
 *rule-specificity* (3/3 seeds for levin, sign-flipping for frame) and the *data-gating*
 (absent at 100k) are exactly the qualitative pattern overregularization predicts.
 Artifacts: `experiments/vfz_ucurve.py`, `vfz_band.py`; runs `word_{levin,frame}_vfz_*`.
+
+---
+
+# Acquisition vs regularisation — scramble & category-gating dissociation
+
+*2026-09-27*
+
+## 1. Design
+
+Purpose-built test of whether the category overlay carries **linguistic content** or acts
+as a **magnitude-matched regulariser**. Primary-category overlay only (`--tma_alpha 0
+--frame_alpha 0 --levin_alpha 0`), 100k tokens, 3 seeds; overlaid categories frozen
+throughout (pre-crossover). Five conditions (`experiments/overlay_variants.py`,
+`analyze_dissociation.py`, `paradigm_categories.py`):
+
+- **none** — `word_learned`, no overlay (floor).
+- **full** — real overlay, all categories (freeze 1–7).
+- **scrambled** (Exp A control) — seeded permutation gives each word another word's whole
+  bundle; category histogram and per-row magnitude preserved, linguistic content destroyed.
+- **on7 / on3** (Exp B) — overlay kept only for determiners / predicatives (freeze matched
+  to the overlaid category so on7 and on3 are symmetric).
+
+BLiMP paradigms are bucketed by the overlay category that carries their contrast (cat7
+DETERMINER, cat3 PREDICATIVE, cat1 REFERENTIAL; single-category paradigms only).
+
+## 2. Result — regularisation, not acquisition
+
+Category-bucket accuracy (mean ± sd, 3 seeds):
+
+| condition | cat7 DET | cat3 PRED | cat1 REF |
+|---|---:|---:|---:|
+| none | 0.649 ± 0.039 | 0.553 ± 0.007 | 0.550 ± 0.012 |
+| full | 0.674 ± 0.048 | 0.555 ± 0.010 | 0.568 ± 0.004 |
+| scrambled | 0.628 ± 0.021 | 0.556 ± 0.004 | 0.556 ± 0.018 |
+| on7 | 0.664 ± 0.038 | 0.559 ± 0.000 | 0.562 ± 0.009 |
+| on3 | 0.642 ± 0.049 | 0.565 ± 0.008 | 0.567 ± 0.008 |
+
+**Exp A — `full` ≈ `scrambled` at every bucket.** full − scrambled: cat7 +0.046 ± 0.052
+(per-seed +0.045/+0.109/−0.017), cat3 −0.001 ± 0.011, cat1 +0.013 ± 0.022 — all within seed
+noise. Destroying the overlay's *linguistic content* while preserving its magnitude and
+category histogram does **not** hurt. The benefit is the scale of a frozen structured init
+acting as a **regulariser**, not the specific category assignment.
+
+**Exp B — no reliable category-targeted acquisition.** Overlaying one category does not
+reliably lift its own paradigms: on7−on3 on cat7 = +0.022 ± 0.020 (marginal); on3−on7 on
+cat3 = +0.007 ± 0.009 (null); vs baseline, on7−none cat7 = +0.015 ± 0.063 (noise), on3−none
+cat3 = +0.012 ± 0.012 (marginal). Directions point the right way (on7→determiners,
+on3→predicatives) but sit at or inside the noise floor.
+
+## 3. Conclusion
+
+At 100k the category overlay **functions as a magnitude-matched regulariser, not as encoded
+linguistic structure**: a content-scrambled overlay does just as well, and category-targeted
+overlays do not reliably move their own paradigms. This is a purpose-built confirmation of
+the "regularisation, not acquisition" theme recurring throughout (BPC gains without BLiMP
+gains). Caveats: 100k sits near the BLiMP floor (cat3/cat1 ≈ 0.55); determiner paradigms are
+high-baseline but very noisy (±0.04–0.05), so the one non-trivial hint — cat7 `full` >
+`scrambled` (+0.046, but ±0.052) — is not significant and would need more seeds to confirm
+or kill. Artifacts: `experiments/overlay_variants.py`, `paradigm_categories.py`,
+`analyze_dissociation.py`; runs `{none,full}_100k_s*` (+ `_scrambled`/`_on7`/`_on3`).
+
+## 4. Infrastructure note
+
+This sweep was run on a compute box where relaunched background jobs persisted invisibly to
+`tasklist`/`ps` (sandbox isolation), so timer-based relaunching piled up ~10 concurrent
+trainers (one run's wall-clock hit 10675 s vs ~1000 s uncontended). Training is
+deterministic per seed, so results are unaffected — but the lesson is: **launch one job and
+wait for its completion signal; never timer-relaunch a job whose liveness you cannot
+observe.**

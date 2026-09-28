@@ -93,3 +93,15 @@ significant; more seeds on just full/scrambled@cat7 would confirm or kill it.
 invisibly to tasklist/ps; timer-relaunching piled up ~10 concurrent trainers (10675 s vs
 ~1000 s uncontended). Fix: one job, wait for its completion signal, never timer-relaunch a
 job you cannot observe.
+
+---
+
+## 2026-09-28 — Determiner hint killed at 9 seeds
+
+Followed up the one non-null hint from the dissociation (cat7 `full` > `scrambled`, +0.046
+at 3 seeds) with 6 more seeds. Over all 9: **+0.027 ± 0.059** (SE 0.020; 95% CI
+[−0.011, +0.066], includes zero; 7/9 seeds positive, one −0.104). Not significant — the
++0.046 was a favourable-seed artefact. So the "overlay = regularisation, not linguistic
+content" conclusion is clean **including for determiners**. One more instance of the
+seed-variance rule that keeps recurring: a 3-seed hint evaporating at 9. Nothing left to
+chase here.

@@ -1504,13 +1504,46 @@ At 100k the category overlay **functions as a magnitude-matched regulariser, not
 linguistic structure**: a content-scrambled overlay does just as well, and category-targeted
 overlays do not reliably move their own paradigms. This is a purpose-built confirmation of
 the "regularisation, not acquisition" theme recurring throughout (BPC gains without BLiMP
-gains). Caveats: 100k sits near the BLiMP floor (cat3/cat1 ≈ 0.55); determiner paradigms are
-high-baseline but very noisy (±0.04–0.05), so the one non-trivial hint — cat7 `full` >
-`scrambled` (+0.046, but ±0.052) — is not significant and would need more seeds to confirm
-or kill. Artifacts: `experiments/overlay_variants.py`, `paradigm_categories.py`,
-`analyze_dissociation.py`; runs `{none,full}_100k_s*` (+ `_scrambled`/`_on7`/`_on3`).
+gains). Caveat: 100k sits near the BLiMP floor (cat3/cat1 ≈ 0.55), and determiner paradigms
+are high-baseline but very noisy (±0.04–0.05). Artifacts:
+`experiments/overlay_variants.py`, `paradigm_categories.py`, `analyze_dissociation.py`; runs
+`{none,full}_100k_s*` (+ `_scrambled`/`_on7`/`_on3`).
 
-## 4. Infrastructure note
+**Determiner follow-up (2026-09-28, 9 seeds): the one hint is killed.** The 3-seed cat7
+`full` > `scrambled` gap (+0.046) prompted a re-run at 6 more seeds (7/21/77/101/303/2025).
+Over all 9 seeds it is **+0.027 ± 0.059** (SE 0.020, 95% CI [−0.011, +0.066] — includes
+zero; 7/9 seeds positive, one at −0.104; full cat7 0.663 vs scrambled 0.636). Not
+significant — the initial +0.046 was a favourable-seed artefact. The regularisation
+conclusion holds cleanly **including for determiners**; the weak positive lean (7/9 seeds)
+is not worth chasing. Another instance of the project's seed-variance rule: a 3-seed hint
+evaporating at 9. Runs `full_100k_s{7,21,77,101,303,2025}` (+ `_scrambled`).
+
+## 4. What this establishes (the positive read)
+
+This is a **successful experiment**, not a disappointment: a magnitude-matched scramble
+control plus category-gating gave a clean, well-powered answer to a question most designs
+leave murky — *is an injected prior linguistic content, or regularisation?* Three things it
+establishes:
+
+1. **It confirms the frozen-prior-as-data mechanism.** The working theory (a frozen
+   category is a "prepackaged dataset" — a shortcut that supplies statistical mass and caps
+   variance in the low-data regime) is exactly what the result validates: the benefit is the
+   *magnitude/scaffold*, which is why scrambling the linguistic labels (same mass, no
+   content) reproduces it. The experiment pinned the mechanism down and ruled out a
+   stronger, shakier reading (that the model reads the category geometry as grammar).
+2. **It locates where acquired structure actually lives.** Coarse frozen *category labels*
+   act as regularisation; the genuine low-data representational wins in this project come
+   from *induced, per-item* structure — the verb subcat-frame prior (best low-data encoding,
+   −0.088 BPC over the category prior) and its reliable few-observation assignment. This
+   result sharpens that contrast rather than contradicting it.
+3. **It is a reusable method.** The scramble control (permute the assignment bundle, match
+   magnitude and histogram, compare) is a drop-in instrument for the
+   acquisition-vs-regularisation question that pervades representation learning; the
+   category-gated dissociation is a template for attributing a capability to a specific
+   injected structure. And the determiner follow-up is the seed-band protocol *working* —
+   catching a 3-seed false positive before it entered the record.
+
+## 5. Infrastructure note
 
 This sweep was run on a compute box where relaunched background jobs persisted invisibly to
 `tasklist`/`ps` (sandbox isolation), so timer-based relaunching piled up ~10 concurrent

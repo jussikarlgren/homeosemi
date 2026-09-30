@@ -105,3 +105,39 @@ at 3 seeds) with 6 more seeds. Over all 9: **+0.027 ± 0.059** (SE 0.020; 95% CI
 content" conclusion is clean **including for determiners**. One more instance of the
 seed-variance rule that keeps recurring: a 3-seed hint evaporating at 9. Nothing left to
 chase here.
+
+---
+
+## 2026-09-30 — Construction-prior certification: grammatical null, regularisation-only BPC, and a method refinement
+
+Ran the CxG certification (11 argument-structure constructions injected as a frozen
+per-word overlay, verbs + markers; full vs magnitude-matched scramble vs none; 5 seeds).
+Full write-up: REPORT.md "Construction-prior certification".
+
+**Result.** BLiMP construction group: full − scrambled = −0.002 ± 0.006 — clean, well-powered
+**null**; the construction assignment does not sharpen grammatical discrimination (same
+verdict as the category labels). BPC: full − scrambled = −0.287 ± 0.089 (all 5 seeds), but
+the construction words are 8.1% of training tokens while the scramble freezes random (rare)
+words — so the BPC gap is mostly a **freeze-placement / regularisation** effect, not
+construction content.
+
+**Constructive value (not just a null):**
+1. The certification method delivered a confident answer and surfaced a real **method
+   refinement** — a frequency-matched scramble is needed for clean BPC certification (the
+   current scramble matches magnitude/histogram but not the frequency of the frozen set).
+2. The construction resource is a **good regulariser** (−0.61 BPC vs floor) — scaffolding the
+   frequent argument-structure words is a genuine data-efficiency lever, just not grammar.
+3. **Encoding, not CxG, is the likely weak point.** Constructions are configurational; a
+   static per-word overlay can only tag words, not represent configurations. So the null
+   bounds this operationalisation, not the hypothesis.
+4. **Triangulated lesson:** two label-injection nulls (category, construction) vs the one
+   content-carrying prior (induced verb frames) → the content lives in **induced, graded,
+   per-item** structure, not hand-labelled categorical membership.
+
+**Where this leaves the CxG bet (evidence-led, willing to depart):** injecting construction
+*labels* as a static embedding prior does not clear the scramble bar at low data. The
+computable path that keeps working is *induced per-item* argument-structure knowledge
+(frames). To give CxG a fair shot: a configuration-aware representation (token-position
+construction signal from a parse; or induced construction-participation distributions) and/or
+post-crossover thaw. Not a rejection of CxG — a redirection toward induced-and-graded
+constructional knowledge.

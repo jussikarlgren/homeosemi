@@ -31,7 +31,7 @@ CHAR_ENCODINGS = ["learned", "random", "onehot", "homeosemi_index",
 # word-level
 WORD_ENCODINGS = ["word_learned", "word_random",
                   "word_homeosemi_context", "word_category", "word_frame",
-                  "word_levin", "bpe_learned"]
+                  "word_levin", "word_construction", "bpe_learned"]
 
 AVAILABLE = CHAR_ENCODINGS + WORD_ENCODINGS
 
@@ -164,8 +164,9 @@ def _word_context_vectors(vocab, token_ids, dim, denseness, window, seed,
 
 def build_word(name, vocab, dim, token_ids=None, word_categories=None,
                tma_categories=None, frame_categories=None, levin_categories=None,
-               denseness=10, window=5,
+               construction_categories=None, denseness=10, window=5,
                overlay_alpha=0.5, tma_alpha=0.3, frame_alpha=0.3, levin_alpha=0.3,
+               construction_alpha=0.3, n_constructions=None,
                enc_tokens=500_000, emb_scale=0.02, seed=1337):
     """Return a (vocab_size, dim) FloatTensor for a word-level encoding, or None
     for 'word_learned' / 'bpe_learned' (both handled as trainable by the harness).
@@ -189,7 +190,8 @@ def build_word(name, vocab, dim, token_ids=None, word_categories=None,
         rows = rng.standard_normal((len(vocab), dim))
         return _rows_to_tensor(rows, dim, emb_scale)
 
-    if name in ("word_homeosemi_context", "word_category", "word_frame", "word_levin"):
+    if name in ("word_homeosemi_context", "word_category", "word_frame", "word_levin",
+                "word_construction"):
         if token_ids is None:
             raise ValueError(f"{name} requires token_ids (training .bin data)")
         print(f"  building word co-occurrence vectors "
@@ -247,6 +249,22 @@ def build_word(name, vocab, dim, token_ids=None, word_categories=None,
                     cid = levin_categories.get(w, 0)
                     if cid != 0:
                         rows[i] += levin_alpha * levin_vecs[cid]
+
+        if name == "word_construction":
+            # argument-structure construction overlay: per-word normalised multi-hot over
+            # K constructions, mixed from K frozen basis vectors. Co-occurrence base only
+            # (NO category overlay) so the construction assignment is the sole injected
+            # content and a magnitude-matched scramble isolates its linguistic value.
+            if not construction_categories:
+                raise ValueError("word_construction requires construction_categories dict")
+            K = n_constructions or len(next(iter(construction_categories.values())))
+            rng = np.random.default_rng(seed + 43)
+            con_vecs = rng.standard_normal((K, dim)).astype(np.float32)
+            con_vecs /= np.linalg.norm(con_vecs, axis=1, keepdims=True)
+            for i, w in enumerate(vocab):
+                dist = construction_categories.get(w)
+                if dist is not None and hasattr(dist, '__len__') and np.sum(dist) > 0:
+                    rows[i] += construction_alpha * (np.asarray(dist, dtype=np.float32) @ con_vecs)
 
         return _rows_to_tensor(rows, dim, emb_scale)
 

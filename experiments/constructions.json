@@ -1,0 +1,49 @@
+{
+  "_comment": "Argument-structure construction inventory (Goldberg-style) for the construction-prior certification test. Each construction lists participating VERBS and characteristic MARKERS; a word may appear in several (multi-hot). The builder inverts this to a per-word normalised distribution over constructions, injected as a frozen overlay; a magnitude-matched scramble is the control. Marker choices are deliberately conservative (clear cues only) — be-forms and infinitival 'to' are excluded as too ambiguous. Hand-curated 2026-09-28 for review; revise freely.",
+  "constructions": {
+    "intransitive": {
+      "verbs": ["sleep", "cry", "laugh", "smile", "sit", "stand", "wait", "work", "play", "sing", "shine", "rain", "bark", "swim", "dance"],
+      "markers": []
+    },
+    "transitive": {
+      "verbs": ["eat", "see", "hit", "make", "take", "find", "want", "like", "love", "need", "read", "write", "hold", "touch", "catch", "watch", "hear", "buy", "wash", "wear", "drink", "feel", "know", "use"],
+      "markers": []
+    },
+    "ditransitive": {
+      "verbs": ["give", "send", "tell", "show", "offer", "hand", "teach", "pay", "bring", "pass", "lend", "promise", "buy", "read", "write"],
+      "markers": []
+    },
+    "caused_motion": {
+      "verbs": ["put", "place", "throw", "push", "pull", "set", "lay", "drop", "carry", "move", "take", "kick", "roll"],
+      "markers": ["into", "onto", "across", "through", "toward", "towards", "past", "away", "up", "down", "over", "out", "off"]
+    },
+    "resultative": {
+      "verbs": ["break", "paint", "wipe", "hammer", "cut", "turn", "roll", "knock", "kick", "shut", "tear", "smash"],
+      "markers": []
+    },
+    "intransitive_motion": {
+      "verbs": ["go", "come", "run", "walk", "move", "fall", "jump", "climb", "fly", "swim", "arrive", "return", "rise", "travel", "crawl", "march"],
+      "markers": ["into", "onto", "across", "through", "toward", "towards", "past", "away", "up", "down", "over", "out"]
+    },
+    "causative_inchoative": {
+      "verbs": ["break", "open", "close", "melt", "freeze", "burn", "grow", "sink", "roll", "turn", "change", "boil", "dry", "shut", "spin", "bounce"],
+      "markers": []
+    },
+    "passive": {
+      "verbs": ["break", "make", "see", "take", "find", "build", "write", "eat", "hit", "catch", "hold", "throw", "send", "tell", "show", "paint", "cut", "open", "close", "kick", "wash", "carry", "kill", "steal"],
+      "markers": ["by"]
+    },
+    "existential_there": {
+      "verbs": ["be", "exist", "live", "remain", "appear", "happen", "seem"],
+      "markers": ["there"]
+    },
+    "conative": {
+      "verbs": ["shoot", "kick", "cut", "hit", "pull", "push", "bite", "scratch", "grab", "tug", "strike"],
+      "markers": ["at"]
+    },
+    "raising": {
+      "verbs": ["seem", "appear", "tend", "happen", "begin", "start", "continue", "used", "come"],
+      "markers": []
+    }
+  }
+}

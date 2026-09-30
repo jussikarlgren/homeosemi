@@ -1551,3 +1551,75 @@ trainers (one run's wall-clock hit 10675 s vs ~1000 s uncontended). Training is
 deterministic per seed, so results are unaffected — but the lesson is: **launch one job and
 wait for its completion signal; never timer-relaunch a job whose liveness you cannot
 observe.**
+
+---
+
+# Construction-prior certification — does an argument-structure construction inventory beat its scramble?
+
+*2026-09-30*
+
+## 1. Design
+
+Direct test of the construction-grammar hypothesis with the scramble-certification method.
+A hand-curated inventory of **11 Goldberg-style argument-structure constructions**
+(`experiments/constructions.json`; 135 words = participating verbs + characteristic
+markers: `there`→existential, `by`→passive, directional preps→(caused-)motion, `at`→conative)
+is injected as a **frozen per-word overlay** (`word_construction`: co-occurrence base + a
+normalised multi-hot over K=11 construction basis vectors — no category overlay, so the
+construction assignment is the sole injected content). Conditions: `none` (word_learned),
+`full`, `scrambled` (magnitude/histogram-matched permutation); 100k, construction words
+frozen, 5 seeds (1337/42/2024/7/21). Builder `experiments/build_constructions.py`; analysis
+`experiments/analyze_construction.py`.
+
+## 2. Result — grammatical null; BPC gain is regularisation (and confounded)
+
+**BLiMP (grammatical-content test): clean, well-powered null.** On the construction-sensitive
+group (15 paradigms: transitive, intransitive, causative, inchoative, drop_argument,
+passive_1/2, animate_subject_*, existential_there_*, tough_vs_raising): none 0.551, full
+0.549, scrambled 0.552; **full − scrambled = −0.002 ± 0.006** (SE 0.003, 2/5 positive),
+full − none = −0.002. A control group (anaphora, det-noun, wh) is likewise flat. Per
+paradigm nothing clears noise; the argument-structure paradigms are if anything slightly
+negative. So the construction *assignment* does not sharpen grammatical discrimination.
+
+**BPC: full beats scrambled — but as a freeze-placement effect, not clean construction
+content.** full 3.309 ± 0.093, scrambled 3.595 ± 0.091, none 3.920 ± 0.011; full − scrambled
+= **−0.287 ± 0.089** (all 5 seeds negative), full − none = −0.611. However the 135
+construction words cover **8.1%** of the first 100k training tokens (frequent verbs +
+markers), while the scramble freezes 135 *random* (mostly rare) words. So most of the BPC gap
+is *which words get frozen at a structured init* (scaffold the frequent argument-structure
+words) rather than the specific construction vectors. This is a **regularisation** benefit —
+real and useful for data efficiency, but not grammatical acquisition.
+
+## 3. Read — honest and constructive
+
+- **The certification method worked and gives a confident answer:** at 100k, a frozen
+  per-word construction-membership overlay does not beat its scramble on grammatical minimal
+  pairs. Same verdict as the coarse category labels — injected *labels* regularise; they do
+  not install grammatical competence that BLiMP detects.
+- **Methodological refinement discovered:** the scramble matches magnitude + histogram but
+  **not the frequency profile of the frozen set**, so BPC comparisons under scramble are
+  confounded by freeze-placement. A **frequency-matched scramble** (permute only among words
+  of similar corpus frequency) is the clean control for BPC certification — a concrete
+  improvement to the instrument for future use.
+- **The construction resource is not worthless — it is a good regulariser.** Identifying the
+  frequent argument-structure-relevant words and scaffolding them lowers BPC substantially
+  (−0.61 vs floor). For data-efficient training that is a genuine lever; it is just not
+  grammatical acquisition.
+- **The encoding, not necessarily construction grammar, is the weak point.** Constructions
+  are *configurational* (multi-word slot-filler patterns); a static per-word embedding
+  overlay can only *tag words*, not represent a configuration. So this null bounds a
+  particular operationalisation, not the CxG hypothesis. The one prior that carried genuine
+  content in this project — the verb subcat-frame overlay — is *data-induced, graded, and
+  per-item*; the two label-injection nulls (category, construction) triangulate the same
+  lesson: **the content lives in induced fine-grained per-item distributions, not in
+  hand-labelled categorical membership.**
+- **Direction (evidence-led).** To test CxG fairly, give constructions a
+  configuration-aware representation (construction signal at the token position from a
+  shallow parse; or induced construction-participation distributions à la frames), and/or
+  test post-crossover / thawed. If injected construction *labels* keep hitting the scramble
+  null while *induced per-item* structure keeps carrying content, the computable path is
+  induced-and-graded construction knowledge rather than static membership tags.
+
+Artifacts: `experiments/constructions.json`, `build_constructions.py`,
+`analyze_construction.py`; encoding `word_construction`; runs
+`con_{none,full}_100k_s{1337,42,2024,7,21}` (+ `_scrambled`).

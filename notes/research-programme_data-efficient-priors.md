@@ -90,12 +90,36 @@ fine structure scores better.
 
 ---
 
-## The concrete next experiment
+## The construction test — run 2026-09-30 (result: label-injection null; redirect to induced/graded)
 
-Apply the acquisition test to *constructions*: inject a small inventory of argument-structure
-constructions (frozen), and check whether it **beats its magnitude-matched scramble** on the
-construction-sensitive BLiMP paradigms. If constructional content clears the scramble bar
-where flat categories did not, that is direct evidence for construction grammar as a
-computable, data-efficient resource — and the freeze-thaw schedule tells you how to deploy
-it. Pair it with a crossover-vs-model-size measurement to establish the data budget over
-which the constructional prior remains in-regime.
+We applied the acquisition test to *constructions*: 11 argument-structure constructions
+(verbs + markers) injected as a frozen per-word overlay, `full` vs magnitude-matched
+`scramble`, 5 seeds, 100k (REPORT.md "Construction-prior certification"). Outcome:
+
+- **BLiMP: clean null** (full − scrambled = −0.002 ± 0.006) — a static per-word
+  construction-membership overlay does **not** clear the scramble bar on grammatical minimal
+  pairs, the same verdict as flat category labels.
+- **BPC: full − scrambled = −0.287** but **confounded** — the construction words are 8.1% of
+  the tokens while the scramble freezes random rare words, so most of the gap is
+  freeze-placement (a real regularisation lever), not construction content.
+
+**What this refines in the programme:**
+1. **Method:** add a **frequency-matched scramble** for clean BPC certification (match the
+   frozen set's corpus-frequency profile, not just magnitude/histogram).
+2. **Design principle, strengthened:** two label-injection nulls (category, construction) vs
+   the one content-carrying prior (induced verb frames) → **the content lives in induced,
+   graded, per-item structure, not hand-labelled categorical membership.**
+3. **Encoding, not CxG, is the bottleneck:** a static per-word overlay can only tag words, not
+   represent the *configurations* constructions are made of. The null bounds this
+   operationalisation, not the hypothesis.
+
+**Redirected next experiment (evidence-led).** Give constructions a representation that can
+carry a configuration: either (a) a token-position construction signal from a shallow
+parse (so the model sees *this span instantiates the ditransitive*, not just *this word is
+ditransitive-ish*), or (b) **induced, graded construction-participation distributions** in
+the spirit of the verb frames that already worked — then certify against a frequency-matched
+scramble, and test post-crossover / thawed. If induced/configurational construction
+knowledge clears the bar where static labels did not, that is the real computable CxG result;
+if it too stays at the scramble null, the evidence says follow induced per-item structure
+wherever it leads. Pair with a crossover-vs-model-size measurement to fix the in-regime data
+budget.

@@ -195,6 +195,10 @@ def main():
                     help="strength of verb subcat-frame overlay (word_frame)")
     ap.add_argument("--levin_alpha", type=float, default=0.3,
                     help="strength of Levin semantic-class overlay (word_levin)")
+    ap.add_argument("--construction_alpha", type=float, default=0.3,
+                    help="strength of argument-structure construction overlay (word_construction)")
+    ap.add_argument("--freeze_construction", action="store_true",
+                    help="freeze rows that carry a construction overlay (word_construction)")
     ap.add_argument("--tma_alpha", type=float, default=0.3,
                     help="TMA overlay strength (word_category encoding)")
     ap.add_argument("--emb_scale", type=float, default=0.02)
@@ -229,13 +233,17 @@ def main():
     tma_categories  = meta.get("tma_distributions", meta.get("tma_categories", None))
     frame_categories = meta.get("frame_distributions", None)
     levin_categories = meta.get("levin_classes", None)
+    construction_map = meta.get("construction_map", None)
+    n_constructions = meta.get("n_constructions", None)
 
     # ── acquisition-vs-regularisation variants (default off; see overlay_variants.py) ──
     if args.scramble_overlay:
         from overlay_variants import scramble_maps
-        word_categories, tma_categories, frame_categories, levin_categories = scramble_maps(
+        (word_categories, tma_categories, frame_categories, levin_categories,
+         construction_map) = scramble_maps(
             args.seed, vocab,
-            word_categories, tma_categories, frame_categories, levin_categories)
+            word_categories, tma_categories, frame_categories, levin_categories,
+            construction_map)
         tag = f"{tag}_scrambled"
     if args.overlay_categories:
         from overlay_variants import gate_categories
@@ -273,11 +281,14 @@ def main():
             tma_categories=tma_categories,
             frame_categories=frame_categories,
             levin_categories=levin_categories,
+            construction_categories=construction_map,
             denseness=args.denseness, window=args.window,
             overlay_alpha=args.overlay_alpha,
             tma_alpha=args.tma_alpha,
             frame_alpha=args.frame_alpha,
             levin_alpha=args.levin_alpha,
+            construction_alpha=args.construction_alpha,
+            n_constructions=n_constructions,
             enc_tokens=args.enc_tokens,
             emb_scale=args.emb_scale, seed=args.seed)
     else:
@@ -304,6 +315,13 @@ def main():
             pass
         if freeze_cat_ids:
             freeze_row_mask = build_freeze_mask(vocab, word_categories, freeze_cat_ids)
+
+    # ── freeze construction-overlaid rows (word_construction) ────────────────
+    if is_word and args.freeze_construction and construction_map is not None and enc_matrix is not None:
+        con_mask = torch.tensor(
+            [bool(np.sum(construction_map.get(w, 0.0)) > 0) for w in vocab], dtype=torch.bool)
+        freeze_row_mask = con_mask if freeze_row_mask is None else (freeze_row_mask | con_mask)
+        print(f"  construction freeze: {int(con_mask.sum())}/{len(vocab)} rows frozen")
 
     # ── build model ───────────────────────────────────────────────────────────
     cfg = GPTConfig(block_size=args.block_size, vocab_size=vocab_size,

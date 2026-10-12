@@ -1623,3 +1623,70 @@ real and useful for data efficiency, but not grammatical acquisition.
 Artifacts: `experiments/constructions.json`, `build_constructions.py`,
 `analyze_construction.py`; encoding `word_construction`; runs
 `con_{none,full}_100k_s{1337,42,2024,7,21}` (+ `_scrambled`).
+
+---
+
+# Configuration-aware construction signal (positional) — certified in two phases
+
+*2026-10-12*
+
+## 1. Design
+
+Follow-up to the static per-word construction null: give constructions a **positional,
+per-occurrence** representation. A shallow recogniser (`experiments/recognize_constructions.py`,
+extending `verbframes.classify_verb_frame` + passive/existential) tags each *token position*
+with the construction its span instantiates, derived from local context — so the same verb
+gets different ids in different sentences (ditransitive "gave him a book" vs. "gave a book to
+him"). A **frozen construction embedding** is added at each tagged position via a
+`forward_pre_hook` on `transformer.drop` (no edit to vendored nanoGPT). Base = trainable
+`word_learned`; the construction signal is the only injected prior. Aligned streams
+`train/val_construction.bin` (16.3% of tokens tagged, 7 constructions). Certification
+control: `--scramble_construction` shuffles ids **across the tagged positions** (same
+positions signalled, identity destroyed — **no freeze-placement confound**, unlike the
+static overlay). none/full/scrambled × 5 seeds @100k. Staged read-out: cheap BPC first, then
+construction-injected BLiMP.
+
+## 2. Phase 1 — BPC: the configuration-derived signal beats its scramble (clean)
+
+Val BPC (3920/3846/3882 ×10⁻³): none 3.920 ± 0.011, **full 3.846 ± 0.028**, scrambled 3.882
+± 0.040. **full − scrambled = −0.036 ± 0.020** (SE 0.009, **5/5 seeds negative**),
+full − none = −0.074. So the construction *identity* (which construction each position
+instantiates) carries real predictive content beyond magnitude and positions — exactly where
+the static per-word overlay was confounded/null. The configuration-aware encoding is what
+unlocked a clean content signal: *how* you encode constructions matters
+(positional/per-occurrence ≫ static per-word tag).
+
+## 3. Phase 2 — BLiMP: the content does NOT become grammatical discrimination
+
+Construction-injected BLiMP (the real recognised signal injected at eval for both full and
+scrambled; `experiments/eval_blimp_construction.py`). Construction group (15 paradigms):
+none 0.551, full 0.546 ± 0.006, scrambled 0.559 ± 0.010; **full − scrambled = −0.013 ± 0.009**
+(SE 0.004, 1/5 positive — if anything slightly negative). Control group flat
+(−0.007 ± 0.018). Per paradigm nothing clears noise. So the predictive BPC gain does **not**
+translate into minimal-pair grammatical competence.
+
+## 4. Read — a clean dissociation, and a genuine data-efficiency win on the LM objective
+
+- **The configuration-aware encoding fixed the predictive side.** Unlike the static overlay
+  (confounded BPC, grammatical null), the positional per-occurrence signal **cleanly beats
+  its scramble on perplexity** (−0.036, 5/5, no confound). For the programme's actual
+  training objective — predict more from less data — injecting *configuration-derived*
+  construction knowledge is a **real, certified data-efficiency lever**, and the encoding
+  (positional, not static) is what makes the content legible.
+- **The grammatical null is now robust, not an encoding artefact.** It holds across *both*
+  the static overlay and the configuration-aware signal, so at this scale (tiny model, 100k
+  tokens) injected linguistic structure manifests as **distributional/predictive** benefit,
+  not as targeted minimal-pair competence. Across the whole project, nothing injected moved
+  BLiMP cleanly; the one thing that did was construction-augmentation *data*. The lever for
+  grammatical competence appears to be examples (and/or capacity), not injected
+  representation.
+- **For construction grammar specifically:** supported on the dimension that matters for
+  data-efficient training (the LM objective) — a properly encoded construction prior lowers
+  perplexity from less data, and the scramble control certifies it is the linguistic content,
+  not regularisation. Whether that converts to grammatical competence is a separate,
+  scale/data-bound question (test post-crossover and at larger capacity).
+
+Artifacts: `experiments/recognize_constructions.py`, `eval_blimp_construction.py`;
+`train_experiment.py` `--construction_pos/--construction_pos_alpha/--scramble_construction`
+(hook-based, nanoGPT untouched); runs `cpos_{none,full}_100k_s{1337,42,2024,7,21}` (+
+`_scrambled`); `data/babylm_lit/{train,val}_construction.bin`.

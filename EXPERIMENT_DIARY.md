@@ -141,3 +141,37 @@ computable path that keeps working is *induced per-item* argument-structure know
 construction signal from a parse; or induced construction-participation distributions) and/or
 post-crossover thaw. Not a rejection of CxG — a redirection toward induced-and-graded
 constructional knowledge.
+
+---
+
+## 2026-10-12 — Configuration-aware constructions: BPC win, BLiMP null (a clean dissociation)
+
+Gave constructions a positional, per-occurrence representation (recogniser tags each token
+position with its span's construction; frozen construction embedding added there via a
+forward pre-hook — nanoGPT untouched). Certified vs a scramble that shuffles ids across the
+SAME tagged positions (no freeze-placement confound). Full write-up: REPORT.md
+"Configuration-aware construction signal".
+
+**Two-phase result.** Phase 1 BPC: full − scrambled = −0.036 ± 0.020 (5/5 seeds) — the
+configuration-derived construction content cleanly beats its scramble on next-token
+prediction, where the static per-word overlay was confounded/null. Phase 2 BLiMP: full −
+scrambled = −0.013 ± 0.009 (1/5, slightly negative) — the predictive content does NOT become
+grammatical minimal-pair competence.
+
+**What this settles:**
+1. The encoding WAS the bottleneck for the predictive signal — positional/per-occurrence
+   makes construction content legible where a static per-word tag did not. Good news for
+   CxG as a *computable, data-efficient* resource on the objective we actually train
+   (perplexity): a properly-encoded construction prior lowers BPC from less data, certified
+   as content (beats scramble, no confound).
+2. The grammatical null is now ROBUST (holds for static AND configuration-aware encodings)
+   — so at this scale injected structure helps prediction, not minimal-pair grammar. The one
+   thing that moved BLiMP in the whole project was construction-augmentation DATA. Grammatical
+   competence looks data/scale-bound, not an encoding problem.
+
+**Bearing on the programme (less data + precompiled resources):** this is a genuine win on
+the dimension that counts for training — configuration-derived construction knowledge is a
+certified data-efficiency lever for the LM objective. The grammatical-probe question is
+separate; retest post-crossover / larger capacity. CxG stays a live, now partly-vindicated
+computable path (on perplexity); the open question is whether its perplexity win converts to
+competence with more data/capacity.

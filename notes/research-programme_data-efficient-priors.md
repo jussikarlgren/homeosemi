@@ -123,3 +123,31 @@ knowledge clears the bar where static labels did not, that is the real computabl
 if it too stays at the scramble null, the evidence says follow induced per-item structure
 wherever it leads. Pair with a crossover-vs-model-size measurement to fix the in-regime data
 budget.
+
+## Configuration-aware follow-up — run 2026-10-12 (BPC win, BLiMP null; CxG partly vindicated)
+
+We ran option (a): a **positional, per-occurrence** construction signal — a shallow recogniser
+tags each token position with its span's construction, and a frozen construction embedding is
+added there (hook-based, nanoGPT untouched); certified vs a scramble that shuffles ids across
+the *same* tagged positions (no freeze-placement confound). Two phases
+(REPORT.md "Configuration-aware construction signal"):
+
+- **Phase 1 — BPC: positive.** full − scrambled = **−0.036 ± 0.020** (5/5 seeds). The
+  configuration-derived construction *content* cleanly beats its scramble on next-token
+  prediction — exactly where the static per-word overlay was confounded/null. **The encoding
+  was the bottleneck for the predictive signal:** positional/per-occurrence makes construction
+  content legible; a static per-word tag does not.
+- **Phase 2 — BLiMP: null.** full − scrambled = **−0.013 ± 0.009** (1/5). The predictive gain
+  does not become minimal-pair grammatical competence; the null now holds across *both*
+  encodings, so it is a scale/data property, not an encoding artefact.
+
+**Net for the programme.** A certified **data-efficiency win on the objective that matters for
+training** (perplexity): a properly-encoded, configuration-derived construction prior lets the
+model predict more from less data, and the scramble control proves it is linguistic content,
+not regularisation. Construction grammar is thus a *live, partly-vindicated computable path* —
+vindicated on perplexity. The remaining question is whether that perplexity win converts to
+grammatical **competence** with more data / capacity; across the whole project only
+construction-augmentation *data* moved BLiMP, so competence looks example-driven. **Next:**
+(1) retest the positional construction signal **post-crossover and at larger capacity** (does
+the BPC win persist and/or convert to BLiMP?); (2) the **induced-graded** variant, option (b);
+(3) fold the frequency-matched scramble into BPC certs generally.

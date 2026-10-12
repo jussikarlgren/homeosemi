@@ -45,23 +45,40 @@ _CHAR_DATA_DIR = os.path.join(_ROOT, "nanoGPT", "data", "shakespeare_char")
 
 # ── data ────────────────────────────────────────────────────────────────────
 
-def get_batch(data, block_size, batch_size, device):
+def get_batch(data, block_size, batch_size, device, con_data=None):
     ix = torch.randint(len(data) - block_size, (batch_size,))
     x = torch.stack([torch.from_numpy(data[i:i+block_size].astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy(data[i+1:i+1+block_size].astype(np.int64)) for i in ix])
+    if con_data is not None:
+        c = torch.stack([torch.from_numpy(con_data[i:i+block_size].astype(np.int64)) for i in ix])
+        return x.to(device), y.to(device), c.to(device)
     return x.to(device), y.to(device)
+
+
+def _set_extra_emb(model, con_table, con_batch):
+    """Set model._extra_emb = frozen construction embedding for this batch (or None)."""
+    if con_table is not None and con_batch is not None:
+        model._extra_emb = con_table[con_batch]   # (B,T,C)
+    elif hasattr(model, "_extra_emb"):
+        model._extra_emb = None
 
 
 @torch.no_grad()
 def estimate_loss(model, splits, block_size, batch_size, eval_iters, device,
-                  char_counts=None):
+                  char_counts=None, con_splits=None, con_table=None):
     """Return dict with train_loss, val_loss, and (if char_counts given) val_bpc."""
     model.eval()
     out = {}
+    con_splits = con_splits or {}
     for name, data in splits.items():
         total_loss = 0.0
+        cdata = con_splits.get(name)
         for _ in range(eval_iters):
-            x, y = get_batch(data, block_size, batch_size, device)
+            batch = get_batch(data, block_size, batch_size, device, con_data=cdata)
+            if cdata is not None:
+                x, y, c = batch; _set_extra_emb(model, con_table, c)
+            else:
+                x, y = batch
             _, loss = model(x, y)
             total_loss += loss.item()
         out[name] = total_loss / eval_iters
@@ -199,6 +216,13 @@ def main():
                     help="strength of argument-structure construction overlay (word_construction)")
     ap.add_argument("--freeze_construction", action="store_true",
                     help="freeze rows that carry a construction overlay (word_construction)")
+    ap.add_argument("--construction_pos", action="store_true",
+                    help="inject a frozen POSITIONAL construction embedding (configuration-aware); "
+                         "reads train/val_construction.bin from --data_dir")
+    ap.add_argument("--construction_pos_alpha", type=float, default=0.5,
+                    help="scale of the positional construction embedding")
+    ap.add_argument("--scramble_construction", action="store_true",
+                    help="certification control: shuffle construction ids across tagged positions")
     ap.add_argument("--tma_alpha", type=float, default=0.3,
                     help="TMA overlay strength (word_category encoding)")
     ap.add_argument("--emb_scale", type=float, default=0.02)
@@ -267,6 +291,28 @@ def main():
         char_counts["train"] = int(args.max_train_tokens * ratio)
 
     splits = {"train": train_data, "val": val_data}
+
+    # ── positional construction streams (configuration-aware prior) ──────────
+    con_splits = None
+    con_table = None
+    if args.construction_pos:
+        from recognize_constructions import N_CON
+        con_train = np.fromfile(os.path.join(args.data_dir, "train_construction.bin"), dtype=np.uint8)
+        con_val = np.fromfile(os.path.join(args.data_dir, "val_construction.bin"), dtype=np.uint8)
+        assert len(con_train) == len(np.memmap(os.path.join(args.data_dir, "train.bin"), dtype=np.uint16, mode="r")), "con/train length mismatch"
+        if args.max_train_tokens:
+            con_train = con_train[:args.max_train_tokens]
+        if args.scramble_construction:
+            # shuffle construction ids across tagged positions (histogram preserved)
+            g = np.random.default_rng(args.seed)
+            for arr in (con_train, con_val):
+                nz = np.nonzero(arr)[0]
+                arr[nz] = g.permutation(arr[nz])
+            tag = f"{tag}_scrambled"
+        con_splits = {"train": con_train, "val": con_val}
+        print(f"[{tag}] positional construction prior: "
+              f"{int((con_train>0).sum()):,}/{len(con_train):,} train tokens tagged "
+              f"({N_CON} constructions, alpha {args.construction_pos_alpha})")
 
     # ── build encoding ───────────────────────────────────────────────────────
     is_word = args.encoding in encoders.WORD_ENCODINGS
@@ -337,6 +383,21 @@ def main():
         print(f"[{tag}] staged unfreeze: frozen rows released at iter {unfreeze_iter} "
               f"(frac {args.unfreeze_at_frac})")
 
+    # ── positional construction injection: frozen con_table + forward pre-hook ─
+    if args.construction_pos:
+        from recognize_constructions import N_CON
+        g = torch.Generator().manual_seed(args.seed + 44)
+        vecs = torch.randn(N_CON, args.n_embd, generator=g)
+        vecs = vecs / vecs.norm(dim=1, keepdim=True) * args.construction_pos_alpha
+        con_table = torch.cat([torch.zeros(1, args.n_embd), vecs], dim=0).to(args.device)  # (N_CON+1, C)
+        model._extra_emb = None
+        def _con_hook(module, inp):
+            if getattr(model, "_extra_emb", None) is not None:
+                return (inp[0] + model._extra_emb,)
+        model.transformer.drop.register_forward_pre_hook(_con_hook)
+        print(f"[{tag}] positional construction embedding injected (frozen, "
+              f"{N_CON} vecs, pre-hook on transformer.drop)")
+
     # ── optimizer (embedding rows in separate group with wd=0 if partially frozen)
     if freeze_row_mask is not None and freeze_row_mask.any():
         emb_params = [model.transformer.wte.weight]
@@ -362,11 +423,16 @@ def main():
     def save_ckpt(ckpt_dir):
         os.makedirs(ckpt_dir, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(ckpt_dir, "model.pt"))
+        cfg_d = {"vocab_size": vocab_size, "n_layer": args.n_layer,
+                 "n_head": args.n_head, "n_embd": args.n_embd,
+                 "block_size": args.block_size, "bias": False,
+                 "data_dir": args.data_dir, "tag": tag}
+        if con_table is not None:
+            torch.save(con_table.cpu(), os.path.join(ckpt_dir, "con_table.pt"))
+            cfg_d["construction_pos"] = True
+            cfg_d["construction_pos_alpha"] = args.construction_pos_alpha
         with open(os.path.join(ckpt_dir, "config.json"), "w") as f:
-            json.dump({"vocab_size": vocab_size, "n_layer": args.n_layer,
-                       "n_head": args.n_head, "n_embd": args.n_embd,
-                       "block_size": args.block_size, "bias": False,
-                       "data_dir": args.data_dir, "tag": tag}, f, indent=2)
+            json.dump(cfg_d, f, indent=2)
 
     # ── training loop ────────────────────────────────────────────────────────
     history = []
@@ -386,7 +452,8 @@ def main():
 
         if it % args.eval_interval == 0 or it == args.max_iters:
             losses = estimate_loss(model, splits, args.block_size, args.batch_size,
-                                   args.eval_iters, args.device, char_counts)
+                                   args.eval_iters, args.device, char_counts,
+                                   con_splits=con_splits, con_table=con_table)
             entry = {"iter": it, "train_loss": losses["train"],
                      "val_loss": losses["val"], "elapsed_s": time.time() - t0}
             if "val_bpc" in losses:
@@ -404,7 +471,12 @@ def main():
                   f"val {losses['val']:.4f}{bpc_str} | {time.time()-t0:.0f}s")
         if it == args.max_iters:
             break
-        x, y = get_batch(train_data, args.block_size, args.batch_size, args.device)
+        batch = get_batch(train_data, args.block_size, args.batch_size, args.device,
+                          con_data=(con_splits["train"] if con_splits else None))
+        if con_splits:
+            x, y, c = batch; _set_extra_emb(model, con_table, c)
+        else:
+            x, y = batch
         _, loss = model(x, y)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()

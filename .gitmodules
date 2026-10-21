@@ -1,0 +1,3 @@
+[submodule "topology/jussipyutils"]
+	path = topology/jussipyutils
+	url = https://github.com/jussikarlgren/jussipyutils.git

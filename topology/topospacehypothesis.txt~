@@ -1,0 +1,25 @@
+Hypothesis for basket of balls of yarn experiment
+September 2026
+JiK
+
+
+A global semantic space is overmodelled. The metaphor I use for this is a basket full of balls of yarn. Each point on a yarn can be addressed through a 3D-vector, where in fact a better more informed address would be something which picks out a specific ball and then tells in 1D how far along the yarn the point in question is. This addressing scheme would be more resilient, since if the balls of yarn move around in the basket, nothing important has happened, but the 3D addressing scheme would break down.
+
+Similarly, a 1000D semantic addressing scheme is overly specific. Better to say "donkey is close to horse" than to place "donkey" in a total space of all lexical items: the formal relation between "donkey" and "cinnamon" or "compiler" is not interesting and the scheme should respond "null" to requests to relate them rather than give a low cosine.
+
+Thus, I wish to design a representation which is based on *local neighbourhoods* (let's call them balls of yarn) each of them random-indexed and a master global index (a basket), also random indexed. When a new item to index occurs, it is placed in a local neighbourhood ball, or several ones, and each of them is updated with the same mechanisms that would be used for a local ball. Sometimes a new ball is introduced by splitting an existing ball. Sometimes several balls are merged. No need to worry about that at the outset.
+
+The claim I have is that this allows for less total dimensionality and thus requires less training data than an overly specific full space would. To accommodate a lexical data set comfortably, instead of a 2000D space, a set (~1000) of smaller ball spaces (with ~10D) will do.
+
+I will need to test the quality of the resulting spaces somehow, thru standard lexical tests to begin with.
+
+I also want to include constructional features, but not at the outset.
+
+
+More reading: 
+
+https://lingvi.st/papers/karlgren-etal-filament-2008.pdf
+
+https://lingvi.st/papers/karlgren-etal-semantic-topology-2014.pdf
+
+https://www.frontiersin.org/journals/artificial-intelligence/articles/10.3389/frai.2021.698809/full

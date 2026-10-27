@@ -1,0 +1,24 @@
+We learn linguistic behaviour by matching observations of the world (most especially other humans) around us with communicative needs we experience as a human actor in that world.
+
+The world is constrained by physics and other things. Not every conceivable world is possible; of all possible worlds we inhabit only one.
+
+Humans act as humans do. Not every conceivable act is possible; not every possible course of action is followed.
+
+Language is constrained by its use as a tool for action in the world, especially with respect to the other human communicators in it. There is a limited palette of things we want to do in the world and say to others. These limits are due to the world itself and to our capacities. Parole is all there is.
+
+Grammar is most often an overly general model of what one can do with string sequences. Radical construction grammar (and information extraction as a target task) is a better framework for understanding language than e.g. Chomskyan idealised grammar models.
+
+We learn language by matching what we observe around us to what we want to achieve. As an infant, this matching is quite challenging since we lack experience with handling the observations and in understanding what we want to achieve. Both those processes progress simultaneously.
+
+Curriculum learning seems a promising avenue to model language learning, but it lacks the infant's intentionality, so it is only half of what we want to model.
+
+The experiments I want to run begin with
+
+- Let's order the input data from simple to difficult, in explicitly editorially organised bands of increasing complexity.
+- Let's enrich the input data by synthesising paraphrases of the utterances we are presenting, preserving topic and situational reference but varying surface level features (e.g. turning things into questions, passivising, etc). 
+- The complexity will be approximated by clausal complexity using grammar rules. This should actually be more about complexity of speech acts.
+- When a new complexity level is reached, learning rate will be stepped up to high, gradually to fall again to low, until the next complexity level is introduced.
+- Constructional information can be preserved, as an encoding for larger amounts of data. These can be added to the signal via random indexing (other schemes are possible) and should be added to participating items in an construction, with more weight on the items that actually carry the construction (e.g. verbs).
+- Possibly role level information could be added similarly, to agents and patients.
+
+

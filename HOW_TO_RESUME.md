@@ -31,9 +31,10 @@ or name the next experiment directly, e.g.:
 
 ## Moving to another machine
 
-The prepared data (`experiments/data/`, ~0.5 GB) and results/checkpoints
-(`experiments/runs/`, ~1.8 GB) are **regenerable** — do not copy them. Copy the minimal
-set below; regenerate the rest.
+The prepared data `.bin`/`meta.pkl` (`experiments/data/**`, ~0.5 GB) and results/checkpoints
+(`experiments/runs/`, ~1.8 GB) are **regenerable** — do not copy them. **Exception:** the
+LLM-generated augmentation corpora are NOT deterministically regenerable and are now
+**committed to git** (see the Copy list). Copy the minimal set below; regenerate the rest.
 
 **Copy (small — code, docs, provenance):**
 - Repo code + docs: `experiments/*.py`, `experiments/*.json`, `CLAUDE.md`, `REPORT.md`,
@@ -42,9 +43,15 @@ set below; regenerate the rest.
 - `nanoGPT/` and `jussipyutils/` — model + utils the scripts import (separate nested git
   repos; clone/copy them alongside).
 - `experiments/litdata/` (2.5 MB) — hand-added prose; **nothing regenerates it**.
-- Memory files (OUTSIDE the repo): the 4 `.md` in
+- **LLM-generated augmentation corpora (now committed to git, ~6 MB)** — non-deterministic,
+  nothing regenerates them: `experiments/data/babylm_paraphrase/paraphrases_*.txt|.jsonl`,
+  `experiments/data/_daring_work/` (generators `gen_*.py` + authored outputs), and root
+  `append_76_111.py` / `fix_jsonl.py`. A `git clone` now brings these; the `babylm_daring*`
+  `.bin`/`meta.pkl` regenerate from the corpora via `prepare_daring.py`.
+- Memory files (OUTSIDE the repo): the 5 `.md` in
   `~/.claude/projects/<encoded-project-path>/memory/` (`MEMORY.md` +
-  `finding_charlevel_encodings.md`, `project_overview.md`, `user_profile.md`).
+  `finding_charlevel_encodings.md`, `project_overview.md`, `user_profile.md`,
+  `decision_refined-hypothesis-choicepoint.md`).
 
 **Re-download or copy (external, ~100 MB):** BabyLM raw text
 (`experiments/data/babylm_simple/train|dev/*.txt`) and `experiments/blimp/*.jsonl` — both
@@ -59,7 +66,7 @@ re-`curl`able from HuggingFace, or just copy them if the corporate-TLS download 
 **Three gotchas:**
 1. The memory folder name **encodes the old absolute path**; on the new machine the
    encoded name differs. Launch Claude once in the new project dir to create the folder,
-   then drop the 4 `.md` files into that new `.../memory/`.
+   then drop the 5 `.md` files into that new `.../memory/`.
 2. `CLAUDE.md` hardcodes the **venv path** and OneDrive project path — update both, or the
    `$VP` run commands won't resolve.
 3. Verify NLTK POS/tokenizer data is present (`categorize.py`, `verbframes.py`,
@@ -128,6 +135,8 @@ Also offered: clean up `experiments/data/_daring_work/` scratch + the several
   BLiMP-aligned 11-construction), `paraphrases_blimp_all_v2.txt` (v2 combined)
 - runs: `word_{category,learned}_{flatck,blimp,blimp2}_100k_s{1337,42,2024}` (+`_ckpt`),
   BLiMP results in each `*_ckpt/blimp_results.json`
-- scratch (safe to delete): `experiments/data/_daring_work/`
+- `experiments/data/_daring_work/` — **now committed** (generators `gen_*.py` + authored
+  outputs; NOT deterministically regenerable). Intermediate `chunk_*.txt` are disposable, but
+  the dir is kept for provenance.
 
 To resume: > "Continue the construction-augmentation work — run the larger-model test"
